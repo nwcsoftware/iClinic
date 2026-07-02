@@ -29,3 +29,6 @@ yarn-error.log*
 *.pem
 *.tsbuildinfo
 .vercel
+
+# keep env templates
+!**/.env.example
