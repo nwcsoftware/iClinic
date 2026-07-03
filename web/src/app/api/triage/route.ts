@@ -42,35 +42,39 @@ const CORRECTION_PATTERNS = [
   'sorry i', 'correction', 'rather',
 ]
 
+// Keywords are matched at word starts (\b prefix), so 'arm' matches "arm" and
+// "arms" but never "harm" or "pharmacy". Multi-word phrases score double.
 const KEYWORDS: Record<string, string[]> = {
-  dermatology: ['skin', 'rash', 'acne', 'pimple', 'mole', 'eczema', 'psoriasis', 'itch', 'hives', 'wart', 'hair loss', 'dandruff', 'nail', 'dry skin', 'sunburn'],
+  dermatology: ['skin', 'rash', 'acne', 'pimple', 'mole', 'eczema', 'psoriasis', 'itch', 'hives', 'wart', 'hair loss', 'dandruff', 'nail', 'dry skin', 'sunburn', 'burn'],
   cardiology: ['heart', 'chest', 'palpitation', 'blood pressure', 'hypertension', 'cholesterol', 'irregular heartbeat', 'racing heart'],
   pediatrics: ['my child', 'my baby', 'my kid', 'my son', 'my daughter', 'infant', 'toddler', 'newborn'],
-  orthopedics: ['bone', 'joint', 'knee', 'shoulder', 'back pain', 'neck pain', 'fracture', 'sprain', 'sports injury', 'hip', 'ankle', 'wrist', 'arthritis', 'muscle pain', 'elbow'],
+  orthopedics: ['bone', 'joint', 'knee', 'shoulder', 'back pain', 'neck pain', 'fracture', 'sprain', 'sports injury', 'hip', 'ankle', 'wrist', 'arthritis', 'muscle pain', 'elbow', 'broke', 'broken', 'arm', 'leg', 'foot', 'heel', 'spine', 'rib', 'twisted'],
   gynecology: ['pregnan', 'period', 'menstrual', 'menstruation', 'pcos', 'ovar', 'vaginal', 'fertility', 'contracept', 'menopause'],
   otolaryngology: ['ear', 'hearing', 'sinus', 'sore throat', 'tonsil', 'nose bleed', 'nosebleed', 'snoring', 'hoarse', 'blocked nose', 'stuffy nose', 'ringing'],
   ophthalmology: ['eye', 'vision', 'blurry', 'blurred', 'seeing spots', 'red eye', 'dry eye', 'glasses'],
   psychiatry: ['anxiety', 'anxious', 'depress', 'panic', 'stress', 'mental health', 'mood', 'insomnia', 'trouble sleeping', 'sleep problem', "can't sleep", 'cant sleep', 'burnout', 'adhd', 'ocd'],
   dentistry: ['tooth', 'teeth', 'gum', 'cavity', 'toothache', 'dental', 'wisdom'],
   neurology: ['headache', 'migraine', 'dizz', 'vertigo', 'numb', 'tingling', 'tremor', 'memory', 'fainting spells', 'nerve pain'],
-  gastroenterology: ['stomach', 'abdominal', 'belly', 'nausea', 'vomit', 'diarrhea', 'constipat', 'reflux', 'heartburn', 'bloat', 'ibs', 'bowel', 'indigestion', 'gas '],
+  gastroenterology: ['stomach', 'abdominal', 'belly', 'nausea', 'vomit', 'diarrhea', 'constipat', 'reflux', 'heartburn', 'bloat', 'ibs', 'bowel', 'indigestion', 'gas'],
   endocrinology: ['diabet', 'thyroid', 'hormone', 'blood sugar', 'weight gain', 'weight loss'],
-  urology: ['urin', 'bladder', 'prostate', 'uti', 'pee', 'erectile', 'testic'],
+  urology: ['urin', 'bladder', 'prostate', 'uti', 'pee', 'erectile', 'testic', 'penis', 'dick', 'genital', 'groin', 'scrotum', 'private part', 'down there'],
   nephrology: ['kidney'],
   pulmonology: ['cough', 'asthma', 'wheez', 'lung', 'bronchitis', 'phlegm', 'congestion'],
   rheumatology: ['lupus', 'autoimmune', 'joint stiffness', 'stiff joints', 'inflammation', 'rheumat'],
   allergy_immunology: ['allerg', 'hay fever', 'pollen', 'sneezing', 'food reaction', 'dust'],
-  general_practice: ['fever', 'flu', 'cold', 'tired', 'fatigue', 'checkup', 'check-up', 'general', 'unwell', 'sick', 'body ache'],
+  general_practice: ['fever', 'flu', 'cold', 'tired', 'fatigue', 'checkup', 'check-up', 'general', 'unwell', 'sick', 'body ache', 'chills'],
 }
 
 // ---------------------------------------------------------------------------
 // Reply pools — varied phrasings so the bot never sounds canned. Variant is
 // picked from conversation state so consecutive answers differ.
 // ---------------------------------------------------------------------------
+const aan = (n: string) => (/^[aeiou]/i.test(n) ? `an ${n}` : `a ${n}`)
+
 const POOLS = {
   recommend: [
     (n: string) => `Thanks for telling me. From what you describe, ${n} is the right specialty for this 👍 I've lined up the top-rated doctors below — this is guidance, not a diagnosis.`,
-    (n: string) => `Got it. That sounds like something a ${n} specialist should look at 🩺 Here are the best-rated doctors for it — remember, I guide you to the right door, I don't diagnose.`,
+    (n: string) => `Got it. That sounds like something ${aan(n)} specialist should look at 🩺 Here are the best-rated doctors for it — remember, I guide you to the right door, I don't diagnose.`,
     (n: string) => `Understood! The specialty that fits this best is ${n}. Take a look at the top doctors below 👇 (I can't give medical advice — a doctor will assess you properly.)`,
     (n: string) => `Okay, that points to ${n} 🎯 I've pulled up the highest-rated doctors for you below. This is direction, not a diagnosis.`,
     (n: string) => `That's one for ${n}. You'll find the top-rated doctors below — book whichever suits you best 😊 (Guidance only, not medical advice.)`,
@@ -112,8 +116,31 @@ const POOLS = {
     () => `I wish I could chat about everything! My specialty is finding YOUR specialist 🧭 What's bothering you health-wise?`,
   ],
   notOffered: [
-    (n: string) => `Honest note: we don't currently have that exact specialist at this clinic 😕 A ${n} can assess you and refer you onward — top-rated ones are below.`,
-    (n: string) => `We don't have that specialty in-house right now. Best next step: see a ${n} here — they can evaluate and refer you. Doctors below 👇`,
+    (n: string) => `Honest note: we don't currently have that exact specialist at this clinic 😕 ${aan(n).replace(/^a/, 'A')} can assess you and refer you onward — top-rated ones are below.`,
+    (n: string) => `We don't have that specialty in-house right now. Best next step: see ${aan(n)} here — they can evaluate and refer you. Doctors below 👇`,
+  ],
+  serious: [
+    (n: string) => `I hear you — a worry like that deserves real attention, not guesses from me. ${aan(n).replace(/^a/, 'A')} can examine you, run the right tests, and refer you to exactly the right specialist if needed. Booking that visit is the right move 💙 Doctors below.`,
+    (n: string) => `That must feel scary, and I won't speculate about something this important. The right step is a proper exam: ${aan(n)} can check you and order tests. You're doing the right thing by looking into it 💙 Top doctors below.`,
+  ],
+  newComplaint: [
+    () => `That sounds like something different — tell me a bit more about it 🔍 Where exactly is it, and how does it feel?`,
+    () => `Okay, new symptom — I'm listening 👂 Where is it and since when?`,
+    () => `Let's look at that separately. Describe it a little more — where it is and how it feels — and I'll match the right specialist.`,
+  ],
+  sameAgain: [
+    (n: string) => `Still the same answer for that one 🙂 ${n} covers it — the doctors below can help with everything you've mentioned.`,
+    (n: string) => `That also falls under ${n}, so my recommendation stands. Pick any of the doctors below 👇`,
+  ],
+  ack: [
+    () => `Ready when you are — tap Book on any doctor below, or tell me if anything else is bothering you 🙂`,
+    () => `Take your time! I'm here if you want to describe anything else.`,
+  ],
+  identity: [
+    () => `I'm a bot trained to help you pick the right doctor 🤖 Describe a symptom — even a few words — and I'll match you with the right specialty.`,
+    () => `That's outside my training — I'm built for one job: helping you pick your doctor 🧭 Tell me how you feel and I'll handle the rest.`,
+    () => `I'll pass on that one — I'm just a doctor-matching bot 🙂 But describe any symptom and I'll point you to the right specialist.`,
+    () => `My training covers exactly one thing: getting you to the right doctor 🤖 What's bothering you health-wise?`,
   ],
 }
 
@@ -145,13 +172,29 @@ function effectiveUserText(messages: ChatMessage[]): { text: string; corrected: 
   return { text: userMsgs.map((m) => m.content).join(' '), corrected: false }
 }
 
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Matching rules: short words (≤4 chars) must be whole words with optional
+// plural — so 'foot' never matches "football" and 'arm' never matches "army".
+// Longer words match as prefixes so 'itch' still covers "itching".
+function keywordRe(w: string): RegExp {
+  const core = escapeRe(w)
+  return w.length <= 4 && !w.includes(' ')
+    ? new RegExp(`\\b${core}s?\\b`)
+    : new RegExp(`\\b${core}`)
+}
+
 function classifyByKeywords(text: string, catalog: Specialty[]): string | null {
-  const t = ` ${text.toLowerCase()} `
+  const t = text.toLowerCase()
   const scores = new Map<string, number>()
   for (const [slug, words] of Object.entries(KEYWORDS)) {
     if (!catalog.some((s) => s.slug === slug)) continue
     let score = 0
-    for (const w of words) if (t.includes(w)) score += w.includes(' ') ? 2 : 1
+    for (const w of words) {
+      if (keywordRe(w).test(t)) score += w.includes(' ') ? 2 : 1
+    }
     if (score > 0) scores.set(slug, score)
   }
   if (scores.size === 0) return null
@@ -161,7 +204,21 @@ function classifyByKeywords(text: string, catalog: Specialty[]): string | null {
 const GREETING_RE = /^(hi|hii+|hello|hey|heyy+|good (morning|afternoon|evening)|salam|marhaba|bonjour|yo)\b[\s!.,]*$/i
 const THANKS_RE = /\b(thanks|thank you|thx|shukran|merci|appreciate)\b/i
 const CAPABILITIES_RE = /\b(who are you|what can you do|what are you|how do you work|what is this|help me understand)\b/i
-const ADVICE_RE = /\b(what (medicine|medication|drug|pill)|which (medicine|medication|drug|pill)|should i take|prescribe|home remedy|remedies|how (do|to) (i )?(treat|cure|fix)|is it (serious|dangerous|cancer)|do i have)\b/i
+const ADVICE_RE = /\b(advi[cs]e|diagnos|be my doctor|my doctor and|what (medicine|medication|drug|pill)|which (medicine|medication|drug|pill)|should i take|prescribe|home remedy|remedies|how (do|to) (i )?(treat|cure|fix)|treat me|cure me|what should i do|what do you think it is|what('s| is) wrong with me|is it (serious|dangerous)|do i have)\b/i
+const SERIOUS_RE = /\b(cancer|tumou?r|lump|leukemia|dying|going to die|terminal)\b/i
+const ACK_RE = /^(ok+|okay+|k|alright|fine|got it|sure|cool|yes|yep|yeah|no|nope|hmm+|great|perfect|nice)[\s!.,]*$/i
+
+// Generic "this is about my health" signal — even when we can't name a
+// specialty yet. Anything WITHOUT this (or a keyword match) is non-medical.
+const MEDICAL_HINT_RE = /\b(pain(s|ful)?|hurt(s|ing)?|ach(e|es|ing)|sore|burn(s|ing)?|bleed(s|ing)?|blood|swollen|swelling|symptom(s)?|fever(ish)?|nausea|nauseous|throw(ing)? up|feel(ing)? (bad|sick|off|weird|unwell|awful|terrible|dizzy)|(don'?t|do not|not) feel(ing)? (good|well|right|okay|ok)|not feeling|unwell|sick|ill|itch(y|es|ing)?|cramp(s)?|infect(ed|ion)?|doctor|clinic)\b/i
+
+// Did the assistant's previous message already recommend a specialty?
+// (Reply pools that recommend always contain the specialty display name.)
+function lastRecommendedName(messages: ChatMessage[], catalog: Specialty[]): string | null {
+  const lastBot = [...messages].reverse().find((m) => m.role === 'assistant')?.content ?? ''
+  for (const s of catalog) if (lastBot.includes(s.name)) return s.name
+  return null
+}
 
 function keywordFallback(messages: ChatMessage[], catalog: Specialty[]): TriageResult {
   const { text, corrected } = effectiveUserText(messages)
@@ -169,6 +226,8 @@ function keywordFallback(messages: ChatMessage[], catalog: Specialty[]): TriageR
   const emergency = detectEmergency(text)
   const seed = messages.length * 7 + last.length
   const botAskedBefore = messages.filter((m) => m.role === 'assistant').length > 1
+  const gpName = catalog.find((s) => s.slug === 'general_practice')?.name ?? 'General Practitioner'
+  const prevRecName = lastRecommendedName(messages, catalog)
 
   const base: Omit<TriageResult, 'reply'> = {
     ready: false, specialty_slug: null, urgency: 'routine', emergency: false, summary: text.slice(0, 280),
@@ -178,32 +237,51 @@ function keywordFallback(messages: ChatMessage[], catalog: Specialty[]): TriageR
   const lastSignal = classifyByKeywords(last, catalog)
   const windowSignal = classifyByKeywords(text, catalog)
 
+  // Serious-illness worries (cancer, tumor...) get an empathetic route, never a cheery template.
+  if (!emergency && SERIOUS_RE.test(last)) {
+    const slug = lastSignal ?? 'general_practice'
+    const name = catalog.find((s) => s.slug === slug)?.name ?? gpName
+    return { ...base, ready: true, specialty_slug: slug, reply: pick(POOLS.serious, seed)(name) }
+  }
+
   if (!emergency && !lastSignal) {
-    // The latest message has no symptom content — handle it as conversation.
+    // ── Intent analysis: the latest message names no specialty-level symptom.
+    // Route by what it actually is; NEVER recommend a specialty off of it.
     if (GREETING_RE.test(last.trim())) return { ...base, reply: pick(POOLS.greeting, seed)() }
     if (THANKS_RE.test(last)) return { ...base, reply: pick(POOLS.thanks, seed)() }
+    if (ACK_RE.test(last.trim())) return { ...base, reply: pick(POOLS.ack, seed)() }
     if (CAPABILITIES_RE.test(last)) return { ...base, reply: pick(POOLS.capabilities, seed)() }
     if (ADVICE_RE.test(last)) {
+      // Advice/diagnosis request: refuse. Point back at the specialty if we know it.
       if (windowSignal) {
-        const name = catalog.find((s) => s.slug === windowSignal)?.name ?? 'General Practitioner'
+        const name = catalog.find((s) => s.slug === windowSignal)?.name ?? gpName
         return {
           ...base, ready: true, specialty_slug: windowSignal,
-          reply: `${pick(POOLS.noAdvice, seed)()} For what you described, ${name} is the right specialty — doctors below 👇`,
+          reply: `${pick(POOLS.noAdvice, seed)()} For what you described, ${name} is still the right specialty — doctors below 👇`,
         }
       }
       return { ...base, reply: pick(POOLS.noAdvice, seed)() }
     }
-    if (!windowSignal) {
-      // Nothing medical anywhere yet: clarify once, then default to GP.
-      if (!botAskedBefore) {
-        return { ...base, reply: last.trim().endsWith('?') ? pick(POOLS.offTopic, seed)() : pick(POOLS.clarify, seed)() }
-      }
+
+    const lastBot = [...messages].reverse().find((m) => m.role === 'assistant')?.content ?? ''
+    const answeringOurQuestion = lastBot.trim().endsWith('?')
+    const medicalHint = MEDICAL_HINT_RE.test(last)
+
+    // Non-medical message (and not an answer to a question we just asked):
+    // say what this bot is for. No specialty, no doctors.
+    if (!medicalHint && !answeringOurQuestion) {
+      return { ...base, reply: pick(POOLS.identity, seed)() }
     }
+
+    // Health-related but too vague to classify:
+    if (medicalHint && prevRecName) return { ...base, reply: pick(POOLS.newComplaint, seed)() }
+    if (!botAskedBefore) return { ...base, reply: pick(POOLS.clarify, seed)() }
+    // We already asked once and it's still vague — fall through to GP below.
   }
 
   if (!emergency && lastSignal && ADVICE_RE.test(last)) {
     // Symptom + treatment question in one message: refuse advice, still route.
-    const name = catalog.find((s) => s.slug === lastSignal)?.name ?? 'General Practitioner'
+    const name = catalog.find((s) => s.slug === lastSignal)?.name ?? gpName
     return {
       ...base, ready: true, specialty_slug: lastSignal,
       reply: `${pick(POOLS.noAdvice, seed)()} For what you described, ${name} is the right specialty — doctors below 👇`,
@@ -212,13 +290,18 @@ function keywordFallback(messages: ChatMessage[], catalog: Specialty[]): TriageR
 
   // Latest message wins over older context; fall back to window, then GP.
   const slug = lastSignal ?? windowSignal ?? catalog.find((s) => s.slug === 'general_practice')?.slug ?? catalog[0]?.slug ?? null
-  const name = catalog.find((s) => s.slug === slug)?.name ?? 'General Practitioner'
+  const name = catalog.find((s) => s.slug === slug)?.name ?? gpName
 
   if (emergency) {
     return {
       ...base, ready: true, specialty_slug: slug, urgency: 'emergency', emergency: true,
       reply: `🚨 Some of what you described can be serious. Please call your local emergency number or go to the nearest emergency department now. For follow-up care afterwards, ${name} is the right specialty — but emergency care comes first.`,
     }
+  }
+
+  // Same specialty as the previous recommendation: acknowledge instead of re-pitching.
+  if (prevRecName === name && !corrected) {
+    return { ...base, ready: true, specialty_slug: slug, reply: pick(POOLS.sameAgain, seed)(name) }
   }
 
   const template = corrected ? pick(POOLS.corrected, seed) : pick(POOLS.recommend, seed)
@@ -241,10 +324,12 @@ HARD RULES — never break these:
 - Reply in the language the patient writes in.
 
 CONVERSATION STYLE:
+- ALWAYS analyze the message first: is it a symptom, a correction, a question about you, an advice request, small talk, or something non-medical? Respond to what it actually is — never answer a non-symptom message with a specialty recommendation.
+- If the message has NO medical content at all (weather, sports, jokes, random questions), tell them — in varied wording — that you are a bot trained to help them pick the right doctor, and invite them to describe a symptom. ready=false, specialty_slug=null for these.
 - Warm, human, brief (1-3 sentences). Light emoji use is welcome (1-2 per message, never in emergencies... except the initial warning symbol).
 - NEVER repeat a sentence structure you already used in this conversation — vary your openings and phrasing every time.
 - If the patient CHANGES THEIR MIND or corrects themselves ("no wait, actually my head hurts"), drop the earlier complaint completely and work with the newest one. Acknowledge the switch naturally.
-- Greetings, thanks, jokes, off-topic questions: respond briefly and cleverly like a good receptionist would, then steer back to their health. Do not force a specialty for non-medical messages (ready=false).
+- If they mention a possibly serious condition (cancer, tumor), lead with empathy — no cheerfulness — and route them to the right specialty for proper testing.
 - Ask at most ONE clarifying question when you genuinely can't pick a specialty; after that, decide (general_practice for vague cases).
 
 SPECIALTY CHOICE — you MUST pick from these slugs only:
