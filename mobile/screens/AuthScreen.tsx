@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Animated, Easing,
 } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'
@@ -9,6 +9,28 @@ import { colors, radius, shadow, type } from '../lib/theme'
 import { PrimaryButton } from '../components/ui'
 import { AmbientBackground, FadeInUp } from '../components/motion'
 import { notify } from '../lib/notify'
+
+// Endless soft pulse ring behind the logo — the login page breathes.
+function LogoPulse() {
+  const v = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 2200, easing: Easing.out(Easing.quad), useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: Platform.OS !== 'web' }),
+    ]))
+    loop.start()
+    return () => loop.stop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <Animated.View style={{
+      position: 'absolute', width: 72, height: 72, borderRadius: 22,
+      borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
+      opacity: v.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.55, 0] }),
+      transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.75] }) }],
+    }} />
+  )
+}
 
 // Patient sign-in. Local testing uses a direct passwordless login minted
 // server-side; production should use the Supabase email-OTP flow.
@@ -36,7 +58,10 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
       <AmbientBackground tone="onBrand" />
       <FadeInUp>
         <View style={styles.hero}>
-          <View style={styles.logo}><MaterialCommunityIcons name="hospital" size={32} color="#fff" /></View>
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <LogoPulse />
+            <View style={styles.logo}><MaterialCommunityIcons name="hospital" size={32} color="#fff" /></View>
+          </View>
           <Text style={styles.appName}>iClinic</Text>
           <Text style={styles.tagline}>The right doctor, in minutes.{'\n'}Describe how you feel — we handle the rest.</Text>
         </View>

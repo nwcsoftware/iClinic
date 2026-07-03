@@ -30,6 +30,12 @@ export const colors = {
   tabInactive: '#93A0B4',
   star: '#F5A623',
   skeleton: '#E9ECF3',
+
+  // Doctor mode — teal identity, distinct from the patient indigo.
+  doc: '#0F766E',
+  docDark: '#0B5A54',
+  docSoft: '#DCF1ED',
+  docSofter: '#F0FAF8',
 }
 
 export const radius = { sm: 10, md: 14, lg: 18, xl: 24, full: 999 }

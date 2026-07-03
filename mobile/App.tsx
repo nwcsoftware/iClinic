@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, Platform, useWindowDimensions } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { supabase } from './lib/supabase'
 import { initPatient, type Doctor, type PatientInfo } from './lib/api'
+import { getDoctorMe, type DoctorMe } from './lib/doctorApi'
 import { colors, shadow } from './lib/theme'
+import SplashScreen from './components/SplashScreen'
 import AuthScreen from './screens/AuthScreen'
 import ProfileSetupScreen from './screens/ProfileSetupScreen'
 import HomeScreen from './screens/HomeScreen'
@@ -14,30 +16,50 @@ import TriageScreen from './screens/TriageScreen'
 import BookingScreen from './screens/BookingScreen'
 import AppointmentsScreen from './screens/AppointmentsScreen'
 import ProfileScreen from './screens/ProfileScreen'
+import DoctorHomeScreen from './screens/doctor/DoctorHomeScreen'
+import DoctorScheduleScreen from './screens/doctor/DoctorScheduleScreen'
+import DoctorPatientsScreen from './screens/doctor/DoctorPatientsScreen'
+import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
 
-type Tab = 'home' | 'doctors' | 'visits' | 'profile'
+type PatientTab = 'home' | 'doctors' | 'visits' | 'profile'
+type DoctorTab = 'dhome' | 'schedule' | 'patients' | 'dprofile'
 type Overlay = { kind: 'triage' } | { kind: 'booking'; doctor: Doctor; reason: string } | null
-type Phase = 'loading' | 'auth' | 'setup' | 'app'
+type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor'
 
-const TABS: { key: Tab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
+const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { key: 'home', icon: 'home', label: 'Home' },
   { key: 'doctors', icon: 'users', label: 'Doctors' },
   { key: 'visits', icon: 'calendar', label: 'Visits' },
   { key: 'profile', icon: 'user', label: 'Profile' },
 ]
 
-function TabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+const DOCTOR_TABS: { key: DoctorTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
+  { key: 'dhome', icon: 'activity', label: 'Today' },
+  { key: 'schedule', icon: 'clock', label: 'Schedule' },
+  { key: 'patients', icon: 'users', label: 'Patients' },
+  { key: 'dprofile', icon: 'user', label: 'Profile' },
+]
+
+function TabBar<T extends string>({
+  tabs, tab, onTab, accent, accentSoft,
+}: {
+  tabs: { key: T; icon: keyof typeof Feather.glyphMap; label: string }[]
+  tab: T
+  onTab: (t: T) => void
+  accent: string
+  accentSoft: string
+}) {
   const insets = useSafeAreaInsets()
   return (
     <View style={[styles.tabbar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const active = t.key === tab
         return (
           <Pressable key={t.key} onPress={() => onTab(t.key)} style={styles.tabItem} hitSlop={6}>
-            <View style={[styles.tabIconWrap, active && { backgroundColor: colors.brandSoft }]}>
-              <Feather name={t.icon} size={19} color={active ? colors.brand : colors.tabInactive} />
+            <View style={[styles.tabIconWrap, active && { backgroundColor: accentSoft }]}>
+              <Feather name={t.icon} size={19} color={active ? accent : colors.tabInactive} />
             </View>
-            <Text style={[styles.tabLabel, active && { color: colors.brand, fontWeight: '800' }]}>{t.label}</Text>
+            <Text style={[styles.tabLabel, active && { color: accent, fontWeight: '800' }]}>{t.label}</Text>
           </Pressable>
         )
       })}
@@ -46,47 +68,88 @@ function TabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 }
 
 function Main() {
-  const [phase, setPhase] = useState<Phase>('loading')
-  const [tab, setTab] = useState<Tab>('home')
+  const [phase, setPhase] = useState<Phase>('splash')
+  const [pTab, setPTab] = useState<PatientTab>('home')
+  const [dTab, setDTab] = useState<DoctorTab>('dhome')
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [patient, setPatient] = useState<PatientInfo | null>(null)
+  const [doctorMe, setDoctorMe] = useState<DoctorMe | null>(null)
+  const splashDone = useRef(false)
+  const resolved = useRef<Phase | null>(null)
 
-  const resolveAfterAuth = useCallback(async () => {
+  // Doctors land on the doctor shell; everyone else on the patient flow.
+  const resolveAfterAuth = useCallback(async (): Promise<Phase> => {
+    try {
+      const doc = await getDoctorMe()
+      if (doc) { setDoctorMe(doc); return 'doctor' }
+    } catch { /* fall through to patient flow */ }
     try {
       const { patient: p, needs_profile } = await initPatient()
-      if (needs_profile) { setPhase('setup'); return }
+      if (needs_profile) return 'setup'
       setPatient(p)
-      setPhase('app')
+      return 'patient'
     } catch {
-      setPhase('app') // API unreachable — let them in; screens retry on their own
+      return 'patient'
     }
   }, [])
 
+  // Resolve the session while the splash animation plays; whoever finishes
+  // last flips the phase.
   useEffect(() => {
     let active = true
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
-      if (data.session) resolveAfterAuth()
-      else setPhase('auth')
+      const next = data.session ? await resolveAfterAuth() : 'auth'
+      if (!active) return
+      resolved.current = next
+      if (splashDone.current) setPhase(next)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!active) return
-      if (!session) { setPhase('auth'); setTab('home'); setOverlay(null); setPatient(null) }
+      if (!session) {
+        setPhase('auth'); setPTab('home'); setDTab('dhome')
+        setOverlay(null); setPatient(null); setDoctorMe(null)
+      }
     })
     return () => { active = false; sub.subscription.unsubscribe() }
   }, [resolveAfterAuth])
 
+  if (phase === 'splash') {
+    return (
+      <SplashScreen onDone={() => {
+        splashDone.current = true
+        setPhase(resolved.current ?? 'loading')
+      }} />
+    )
+  }
   if (phase === 'loading') {
+    // Splash finished before the session resolved — brief spinner.
+    if (resolved.current) setPhase(resolved.current)
     return <View style={styles.center}><ActivityIndicator size="large" color={colors.brand} /></View>
   }
   if (phase === 'auth') {
-    return <AuthScreen onAuthed={() => { setPhase('loading'); resolveAfterAuth() }} />
+    return <AuthScreen onAuthed={async () => { setPhase(await resolveAfterAuth()) }} />
   }
   if (phase === 'setup') {
-    return <ProfileSetupScreen onDone={() => { setPhase('loading'); resolveAfterAuth() }} />
+    return <ProfileSetupScreen onDone={async () => { setPhase(await resolveAfterAuth()) }} />
   }
 
-  // Full-screen flows above the tabs
+  // ── Doctor shell ──────────────────────────────────────────────────────────
+  if (phase === 'doctor' && doctorMe) {
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
+          {dTab === 'dhome' && <DoctorHomeScreen doctor={doctorMe} />}
+          {dTab === 'schedule' && <DoctorScheduleScreen />}
+          {dTab === 'patients' && <DoctorPatientsScreen />}
+          {dTab === 'dprofile' && <DoctorProfileScreen doctor={doctorMe} onSignedOut={() => setPhase('auth')} />}
+        </View>
+        <TabBar tabs={DOCTOR_TABS} tab={dTab} onTab={setDTab} accent={colors.doc} accentSoft={colors.docSoft} />
+      </View>
+    )
+  }
+
+  // ── Patient shell ─────────────────────────────────────────────────────────
   if (overlay?.kind === 'triage') {
     return (
       <TriageScreen
@@ -101,7 +164,7 @@ function Main() {
         doctor={overlay.doctor}
         reason={overlay.reason}
         onBack={() => setOverlay(null)}
-        onDone={() => { setOverlay(null); setTab('visits') }}
+        onDone={() => { setOverlay(null); setPTab('visits') }}
       />
     )
   }
@@ -109,20 +172,20 @@ function Main() {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
-        {tab === 'home' && (
+        {pTab === 'home' && (
           <HomeScreen
             patient={patient}
             onStartTriage={() => setOverlay({ kind: 'triage' })}
-            onOpenDoctors={() => setTab('doctors')}
+            onOpenDoctors={() => setPTab('doctors')}
             onPickDoctor={(doctor) => setOverlay({ kind: 'booking', doctor, reason: '' })}
-            onViewVisits={() => setTab('visits')}
+            onViewVisits={() => setPTab('visits')}
           />
         )}
-        {tab === 'doctors' && (
+        {pTab === 'doctors' && (
           <DoctorsScreen onPickDoctor={(doctor) => setOverlay({ kind: 'booking', doctor, reason: '' })} />
         )}
-        {tab === 'visits' && <AppointmentsScreen onBook={() => setTab('doctors')} />}
-        {tab === 'profile' && (
+        {pTab === 'visits' && <AppointmentsScreen onBook={() => setPTab('doctors')} />}
+        {pTab === 'profile' && (
           <ProfileScreen
             patient={patient}
             onSignedOut={() => setPhase('auth')}
@@ -130,7 +193,7 @@ function Main() {
           />
         )}
       </View>
-      <TabBar tab={tab} onTab={setTab} />
+      <TabBar tabs={PATIENT_TABS} tab={pTab} onTab={setPTab} accent={colors.brand} accentSoft={colors.brandSoft} />
     </View>
   )
 }
