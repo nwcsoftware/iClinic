@@ -95,6 +95,13 @@ function Main() {
 
   // Resolve the session while the splash animation plays; whoever finishes
   // last flips the phase.
+  const [splashOver, setSplashOver] = useState(false)
+  const [resolvedPhase, setResolvedPhase] = useState<Phase | null>(null)
+
+  useEffect(() => {
+    if (splashOver && resolvedPhase && phase === 'splash') setPhase(resolvedPhase)
+  }, [splashOver, resolvedPhase, phase])
+
   useEffect(() => {
     let active = true
     supabase.auth.getSession().then(async ({ data }) => {
@@ -102,6 +109,7 @@ function Main() {
       const next = data.session ? await resolveAfterAuth() : 'auth'
       if (!active) return
       resolved.current = next
+      setResolvedPhase(next)
       if (splashDone.current) setPhase(next)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -115,16 +123,17 @@ function Main() {
   }, [resolveAfterAuth])
 
   if (phase === 'splash') {
+    // Stay on the splash until BOTH the animation and the session check are
+    // done; the effect above flips the phase when the last one lands.
     return (
       <SplashScreen onDone={() => {
         splashDone.current = true
-        setPhase(resolved.current ?? 'loading')
+        setSplashOver(true)
+        if (resolved.current) setPhase(resolved.current)
       }} />
     )
   }
   if (phase === 'loading') {
-    // Splash finished before the session resolved — brief spinner.
-    if (resolved.current) setPhase(resolved.current)
     return <View style={styles.center}><ActivityIndicator size="large" color={colors.brand} /></View>
   }
   if (phase === 'auth') {
