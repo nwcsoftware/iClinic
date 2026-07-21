@@ -59,3 +59,54 @@ if (leftovers.length > 0) {
   process.exit(1)
 }
 console.log('web export is deploy-safe')
+
+// ---------------------------------------------------------------------------
+// Home-screen icons. Expo only emits a small favicon, so "Add to Home Screen"
+// upscales it and looks pixelated. Ship real PWA icons + a manifest.
+// ---------------------------------------------------------------------------
+const ICON_SRC = path.resolve(import.meta.dirname, '..', 'assets', 'icons')
+const ICON_OUT = path.join(DIST, 'icons')
+const ICON_SIZES = [1024, 512, 192, 180, 96, 48, 32]
+
+await fs.mkdir(ICON_OUT, { recursive: true })
+for (const size of ICON_SIZES) {
+  const from = path.join(ICON_SRC, `icon-${size}.png`)
+  if (await exists(from)) await fs.copyFile(from, path.join(ICON_OUT, `icon-${size}.png`))
+}
+
+const manifest = {
+  name: 'iClinic',
+  short_name: 'iClinic',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#3056D3',
+  theme_color: '#3056D3',
+  icons: [
+    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/icon-1024.png', sizes: '1024x1024', type: 'image/png' },
+  ],
+}
+await fs.writeFile(path.join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2))
+
+const HEAD_TAGS = `
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+<meta name="theme-color" content="#3056D3" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="iClinic" />
+`.trim()
+
+const htmlPath = path.join(DIST, 'index.html')
+let html = await fs.readFile(htmlPath, 'utf8')
+if (!html.includes('apple-touch-icon')) {
+  html = html.replace('</head>', `${HEAD_TAGS}\n</head>`)
+  await fs.writeFile(htmlPath, html)
+  console.log('added PWA icons + manifest to index.html')
+} else {
+  console.log('PWA icons already present')
+}
