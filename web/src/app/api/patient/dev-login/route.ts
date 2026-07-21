@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// LOCAL-TESTING ONLY passwordless login.
+// DEMO passwordless login.
 // Mints a real Supabase session for the given email using the service-role key,
-// so you can sign in without waiting for an emailed OTP code. Disabled in
-// production. For the real product, use the emailed 6-digit code flow
-// (needs the Supabase "Magic Link" email template to include {{ .Token }}).
+// so users can sign in with just an email — no code. Enabled in development,
+// and in production ONLY while ALLOW_DEMO_LOGIN=true is set (demo phase).
+// Before real launch: remove ALLOW_DEMO_LOGIN and switch to the emailed
+// 6-digit code flow (Supabase "Magic Link" template must include {{ .Token }}).
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_LOGIN !== 'true') {
     return NextResponse.json({ error: 'Disabled in production' }, { status: 403 })
   }
   try {
