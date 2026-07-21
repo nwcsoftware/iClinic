@@ -68,45 +68,100 @@ const ICON_SRC = path.resolve(import.meta.dirname, '..', 'assets', 'icons')
 const ICON_OUT = path.join(DIST, 'icons')
 const ICON_SIZES = [1024, 512, 192, 180, 96, 48, 32]
 
+// Phones cache home-screen icons hard. Version the filenames so a changed icon
+// is always a new URL and can never serve stale.
+const V = process.env.ICON_VERSION ?? '3'
+
 await fs.mkdir(ICON_OUT, { recursive: true })
 for (const size of ICON_SIZES) {
   const from = path.join(ICON_SRC, `icon-${size}.png`)
-  if (await exists(from)) await fs.copyFile(from, path.join(ICON_OUT, `icon-${size}.png`))
+  if (await exists(from)) {
+    await fs.copyFile(from, path.join(ICON_OUT, `icon-${size}-v${V}.png`))
+  }
 }
+const icon = (size) => `/icons/icon-${size}-v${V}.png`
 
 const manifest = {
   name: 'iClinic',
   short_name: 'iClinic',
+  id: '/',
   start_url: '/',
+  scope: '/',
   display: 'standalone',
+  orientation: 'portrait',
   background_color: '#3056D3',
   theme_color: '#3056D3',
   icons: [
-    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    { src: '/icons/icon-1024.png', sizes: '1024x1024', type: 'image/png' },
+    { src: icon(192), sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: icon(512), sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: icon(192), sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+    { src: icon(512), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: icon(1024), sizes: '1024x1024', type: 'image/png', purpose: 'any' },
   ],
 }
-await fs.writeFile(path.join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2))
+await fs.writeFile(path.join(DIST, `manifest-v${V}.json`), JSON.stringify(manifest, null, 2))
+
+// A service worker is what makes Chrome treat this as an installable app
+// rather than a bookmark shortcut (which uses a low-res favicon).
+const SW = `// iClinic service worker — network-first, offline fallback to the shell.
+const CACHE = 'iclinic-v${V}'
+self.addEventListener('install', (e) => {
+  self.skipWaiting()
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/index.html'])).catch(() => {}))
+})
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+})
+self.addEventListener('fetch', (e) => {
+  const req = e.request
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return
+  e.respondWith(
+    fetch(req)
+      .then((res) => {
+        const copy = res.clone()
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {})
+        return res
+      })
+      .catch(() => caches.match(req).then((hit) => hit ?? caches.match('/index.html')))
+  )
+})
+`
+await fs.writeFile(path.join(DIST, 'sw.js'), SW)
 
 const HEAD_TAGS = `
-<link rel="manifest" href="/manifest.json" />
-<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
-<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+<link rel="manifest" href="/manifest-v${V}.json" />
+<link rel="apple-touch-icon" sizes="180x180" href="${icon(180)}" />
+<link rel="apple-touch-icon" sizes="192x192" href="${icon(192)}" />
+<link rel="apple-touch-icon" href="${icon(180)}" />
+<link rel="icon" type="image/png" sizes="512x512" href="${icon(512)}" />
+<link rel="icon" type="image/png" sizes="192x192" href="${icon(192)}" />
+<link rel="icon" type="image/png" sizes="32x32" href="${icon(32)}" />
 <meta name="theme-color" content="#3056D3" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="iClinic" />
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {})
+  })
+}
+</script>
 `.trim()
 
 const htmlPath = path.join(DIST, 'index.html')
 let html = await fs.readFile(htmlPath, 'utf8')
+// Drop Expo's low-res favicon link so nothing competes with the real icons.
+html = html.replace(/<link rel="icon" href="\/favicon\.ico"[^>]*>/g, '')
 if (!html.includes('apple-touch-icon')) {
   html = html.replace('</head>', `${HEAD_TAGS}\n</head>`)
-  await fs.writeFile(htmlPath, html)
-  console.log('added PWA icons + manifest to index.html')
+  console.log(`added PWA icons (v${V}), manifest and service worker`)
 } else {
-  console.log('PWA icons already present')
+  console.log('PWA tags already present')
 }
+await fs.writeFile(htmlPath, html)

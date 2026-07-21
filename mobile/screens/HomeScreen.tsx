@@ -75,7 +75,6 @@ export default function HomeScreen({
             <Text style={styles.greet}>{t(greetingKey())},</Text>
             <Text style={styles.name}>{firstName(patient?.full_name)}</Text>
           </View>
-          <Avatar name={patient?.full_name ?? 'Me'} size={46} />
         </View>
       </FadeInUp>
 

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { getDoctorOverview, type DoctorMe, type DoctorOverview } from '../../lib/doctorApi'
 import { colors, radius, shadow, statusColors, type } from '../../lib/theme'
-import { Avatar, Badge, Card } from '../../components/ui'
+import { Badge, Card } from '../../components/ui'
 import { DoctorAmbient, FadeInUp } from '../../components/motion'
 
 const heroArt = require('../../assets/illustrations/doctor-hero.png')
@@ -67,7 +67,6 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
               <Text style={styles.greet}>Welcome back,</Text>
               <Text style={styles.name}>Dr. {firstName(doctor.full_name)}</Text>
             </View>
-            <Avatar name={doctor.full_name} size={46} />
           </View>
         </FadeInUp>
 
