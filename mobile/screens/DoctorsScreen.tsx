@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import { getDoctors, type Doctor } from '../lib/api'
 import { colors, radius, iconForSpecialty, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { Avatar, Card, EmptyState, Rating } from '../components/ui'
 import { FadeInUp } from '../components/motion'
 
 export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doctor) => void }) {
   const insets = useSafeAreaInsets()
+  const { t } = useI18n()
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -37,12 +39,12 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FadeInUp>
         <View style={{ paddingTop: Math.max(insets.top, Platform.OS === 'web' ? 20 : 14) + 8, paddingHorizontal: 20 }}>
-          <Text style={type.h1}>Find a doctor</Text>
+          <Text style={type.h1}>{t('doctors.title')}</Text>
           <View style={styles.searchWrap}>
             <Feather name="search" size={17} color={colors.textFaint} />
             <TextInput
               style={styles.search}
-              placeholder="Search by name or specialty"
+              placeholder={t('doctors.search')}
               placeholderTextColor={colors.textFaint}
               value={query}
               onChangeText={setQuery}
@@ -63,7 +65,7 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
             contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
             <Pressable onPress={() => setSpecFilter(null)}
               style={[styles.filterChip, !specFilter && styles.filterChipActive]}>
-              <Text style={[styles.filterChipText, !specFilter && styles.filterChipTextActive]}>All</Text>
+              <Text style={[styles.filterChipText, !specFilter && styles.filterChipTextActive]}>{t('doctors.all')}</Text>
             </Pressable>
             {specialties.map(([slug, name]) => {
               const active = specFilter === slug
@@ -87,7 +89,7 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
         {loading ? (
           <ActivityIndicator color={colors.brand} style={{ marginTop: 40 }} />
         ) : filtered.length === 0 ? (
-          <EmptyState icon="search" title="No doctors found" sub="Try a different search or filter." />
+          <EmptyState icon="search" title={t('doctors.none')} sub={t('doctors.noneSub')} />
         ) : (
           filtered.map((d, i) => (
             <FadeInUp key={d.id} delay={Math.min(i, 6) * 55}>
@@ -96,10 +98,10 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
                   <Avatar name={d.full_name} size={54} />
                   <View style={{ flex: 1 }}>
                     <Text style={type.h2} numberOfLines={1}>{d.full_name}</Text>
-                    <Text style={[type.sub, { marginTop: 2 }]}>{d.specialty_name ?? d.specialty ?? 'Specialist'}</Text>
+                    <Text style={[type.sub, { marginTop: 2 }]}>{d.specialty_name ?? d.specialty ?? t('common.specialist')}</Text>
                     <View style={{ marginTop: 4 }}><Rating rating={d.rating} count={d.review_count} /></View>
                   </View>
-                  <View style={styles.bookPill}><Text style={styles.bookPillText}>Book</Text></View>
+                  <View style={styles.bookPill}><Text style={styles.bookPillText}>{t('common.book')}</Text></View>
                 </View>
               </Card>
             </FadeInUp>

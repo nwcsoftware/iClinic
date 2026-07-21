@@ -4,25 +4,27 @@ import {
 } from 'react-native'
 import { initPatient } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { PrimaryButton } from '../components/ui'
 import { notify } from '../lib/notify'
 
 // Shown after first login when no patient record exists yet.
 export default function ProfileSetupScreen({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n()
   const [fullName, setFullName] = useState('')
   const [mobile, setMobile] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSave() {
     if (!fullName.trim() || mobile.trim().length < 6) {
-      notify('Please enter your name and mobile number'); return
+      notify(t('setup.invalid')); return
     }
     setLoading(true)
     try {
       await initPatient({ full_name: fullName.trim(), mobile_number: mobile.trim() })
       onDone()
     } catch (e) {
-      notify('Could not save', e instanceof Error ? e.message : 'Unknown error')
+      notify(t('setup.saveFailed'), e instanceof Error ? e.message : undefined)
     } finally {
       setLoading(false)
     }
@@ -31,18 +33,18 @@ export default function ProfileSetupScreen({ onDone }: { onDone: () => void }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.hero}>
-        <Text style={styles.title}>Nice to meet you</Text>
-        <Text style={styles.sub}>Two quick details and you're ready to book.</Text>
+        <Text style={styles.title}>{t('setup.title')}</Text>
+        <Text style={styles.sub}>{t('setup.sub')}</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Full name</Text>
-        <TextInput style={styles.input} placeholder="Your full name" placeholderTextColor={colors.textFaint}
+        <Text style={styles.label}>{t('setup.fullName')}</Text>
+        <TextInput style={styles.input} placeholder={t('setup.fullNamePlaceholder')} placeholderTextColor={colors.textFaint}
           value={fullName} onChangeText={setFullName} />
-        <Text style={[styles.label, { marginTop: 18 }]}>Mobile number</Text>
+        <Text style={[styles.label, { marginTop: 18 }]}>{t('setup.mobile')}</Text>
         <TextInput style={styles.input} placeholder="+961 xx xxx xxx" placeholderTextColor={colors.textFaint}
           keyboardType="phone-pad" value={mobile} onChangeText={setMobile} />
-        <PrimaryButton label="Continue" onPress={handleSave} loading={loading} style={{ marginTop: 20 }} />
+        <PrimaryButton label={t('setup.continue')} onPress={handleSave} loading={loading} style={{ marginTop: 20 }} />
       </View>
     </KeyboardAvoidingView>
   )

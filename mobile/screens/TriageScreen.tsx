@@ -9,21 +9,13 @@ import {
   triage, getTriageHistory, closeTriageSession, type ChatMessage, type Doctor,
 } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { Avatar, Rating, TopBar } from '../components/ui'
 import { FadeInUp } from '../components/motion'
 
 type Bubble = ChatMessage & { id: number }
 
-const GREETING = "Hi, I'm your health assistant 👋 Tell me what's bothering you — your symptoms and how long you've had them — and I'll point you to the right specialty. I don't give medical advice or diagnoses."
-
-const SUGGESTIONS = [
-  '🤕 I have a headache',
-  '🌡️ Fever and chills',
-  '🫁 Cough and congestion',
-  '🦵 Knee and back pain',
-  '😴 Trouble sleeping',
-  '🍽️ Stomach pain after meals',
-]
+const SUGGESTION_KEYS = ['chat.s1', 'chat.s2', 'chat.s3', 'chat.s4', 'chat.s5', 'chat.s6'] as const
 
 function TypingDots() {
   const dots = [useRef(new Animated.Value(0.3)).current, useRef(new Animated.Value(0.3)).current, useRef(new Animated.Value(0.3)).current]
@@ -57,6 +49,7 @@ export default function TriageScreen({
   onPickDoctor: (doctor: Doctor, summary: string) => void
 }) {
   const insets = useSafeAreaInsets()
+  const { t, lang } = useI18n()
   const [bubbles, setBubbles] = useState<Bubble[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -88,10 +81,10 @@ export default function TriageScreen({
           setShowSuggestions(false)
           scrollDown(false)
         } else {
-          setBubbles([{ id: 0, role: 'assistant', content: GREETING }])
+          setBubbles([{ id: 0, role: 'assistant', content: t('chat.greeting') }])
         }
       })
-      .catch(() => { if (active) setBubbles([{ id: 0, role: 'assistant', content: GREETING }]) })
+      .catch(() => { if (active) setBubbles([{ id: 0, role: 'assistant', content: t('chat.greeting') }]) })
       .finally(() => { if (active) setRestoring(false) })
     return () => { active = false }
   }, [])
@@ -101,7 +94,7 @@ export default function TriageScreen({
     try { await closeTriageSession() } catch { /* history stays, UI resets anyway */ }
     sessionId.current = null
     history.current = []
-    setBubbles([{ id: bubbleId++, role: 'assistant', content: GREETING }])
+    setBubbles([{ id: bubbleId++, role: 'assistant', content: t('chat.greeting') }])
     setDoctors([])
     setSummary('')
     setEmergency(false)
@@ -121,7 +114,7 @@ export default function TriageScreen({
     scrollDown()
 
     try {
-      const res = await triage(history.current, sessionId.current)
+      const res = await triage(history.current, sessionId.current, lang)
       sessionId.current = res.session_id ?? sessionId.current
       setBubbles((b) => [...b, { id: bubbleId++, role: 'assistant', content: res.reply }])
       history.current = [...history.current, { role: 'assistant', content: res.reply }]
@@ -133,7 +126,7 @@ export default function TriageScreen({
     } catch (e) {
       setBubbles((b) => [...b, {
         id: bubbleId++, role: 'assistant',
-        content: `Sorry, I couldn't reach the assistant. ${e instanceof Error ? e.message : ''}`,
+        content: `${t('chat.unreachable')} ${e instanceof Error ? e.message : ''}`,
       }])
     } finally {
       setLoading(false)
@@ -144,7 +137,7 @@ export default function TriageScreen({
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TopBar
-        title="Health assistant"
+        title={t('chat.title')}
         onBack={onBack}
         right={
           <Pressable onPress={startNewChat} hitSlop={10}>
@@ -182,10 +175,10 @@ export default function TriageScreen({
 
             {showSuggestions && !loading && (
               <FadeInUp delay={200}>
-                <Text style={[type.small, { marginLeft: 4, marginBottom: 8 }]}>Common concerns</Text>
+                <Text style={[type.small, { marginLeft: 4, marginBottom: 8 }]}>{t('chat.common')}</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {SUGGESTIONS.map((s) => (
-                    <Pressable key={s} onPress={() => send(s.replace(/^\S+\s/, ''))}
+                  {SUGGESTION_KEYS.map((k) => t(k)).map((s) => (
+                    <Pressable key={s} onPress={() => send(s)}
                       style={({ pressed }) => [styles.suggestion, pressed && { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft }]}>
                       <Text style={styles.suggestionText}>{s}</Text>
                     </Pressable>
@@ -199,7 +192,7 @@ export default function TriageScreen({
                 <View style={styles.emergency}>
                   <Feather name="alert-triangle" size={16} color={colors.danger} style={{ marginTop: 1 }} />
                   <Text style={styles.emergencyText}>
-                    If this is an emergency, call your local emergency number or go to the nearest emergency department now.
+                    {t('chat.emergency')}
                   </Text>
                 </View>
               </FadeInUp>
@@ -207,19 +200,19 @@ export default function TriageScreen({
 
             {doctors.length > 0 && (
               <View style={{ marginTop: 12 }}>
-                <Text style={[type.label, { marginBottom: 10, marginLeft: 4 }]}>Top rated for this specialty</Text>
+                <Text style={[type.label, { marginBottom: 10, marginLeft: 4 }]}>{t('chat.recommended')}</Text>
                 {doctors.map((d, i) => (
                   <FadeInUp key={d.id} delay={i * 90}>
                     <View style={styles.docCard}>
                       <Avatar name={d.full_name} size={48} />
                       <View style={{ flex: 1 }}>
                         <Text style={type.h2} numberOfLines={1}>{d.full_name}</Text>
-                        <Text style={[type.sub, { marginTop: 1 }]}>{d.specialty_name ?? d.specialty ?? 'Specialist'}</Text>
+                        <Text style={[type.sub, { marginTop: 1 }]}>{d.specialty_name ?? d.specialty ?? t('common.specialist')}</Text>
                         <View style={{ marginTop: 3 }}><Rating rating={d.rating} count={d.review_count} /></View>
                       </View>
                       <Pressable onPress={() => onPickDoctor(d, summary)}
                         style={({ pressed }) => [styles.bookBtn, pressed && { backgroundColor: colors.brandDark }]}>
-                        <Text style={styles.bookBtnText}>Book</Text>
+                        <Text style={styles.bookBtnText}>{t('common.book')}</Text>
                       </Pressable>
                     </View>
                   </FadeInUp>
@@ -233,7 +226,7 @@ export default function TriageScreen({
       <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TextInput
           style={styles.input}
-          placeholder="Describe your symptoms"
+          placeholder={t('chat.placeholder')}
           placeholderTextColor={colors.textFaint}
           value={input}
           onChangeText={setInput}

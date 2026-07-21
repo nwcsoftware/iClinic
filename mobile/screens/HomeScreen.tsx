@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { getDoctors, getMyAppointments, type Appointment, type Doctor, type PatientInfo } from '../lib/api'
 import { colors, radius, shadow, specialtyIcon, DEFAULT_SPECIALTY_ICON, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { Avatar, Card, Rating, SectionHeader, SpecIcon } from '../components/ui'
 import { AmbientBackground, FadeInUp } from '../components/motion'
 
@@ -15,16 +16,14 @@ function firstName(full: string | undefined | null): string {
   return (full ?? '').trim().split(/\s+/)[0] || 'there'
 }
 
-function greeting(): string {
+function greetingKey(): 'home.morning' | 'home.afternoon' | 'home.evening' {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 12) return 'home.morning'
+  if (h < 18) return 'home.afternoon'
+  return 'home.evening'
 }
 
-function fmtDate(d: string): string {
-  return new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
+
 
 export default function HomeScreen({
   patient, onStartTriage, onOpenDoctors, onPickDoctor, onViewVisits,
@@ -36,6 +35,7 @@ export default function HomeScreen({
   onViewVisits: () => void
 }) {
   const insets = useSafeAreaInsets()
+  const { t, locale, isRTL } = useI18n()
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [nextVisit, setNextVisit] = useState<Appointment | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -72,7 +72,7 @@ export default function HomeScreen({
       <FadeInUp>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'web' ? 20 : 14) + 8 }]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greet}>{greeting()},</Text>
+            <Text style={styles.greet}>{t(greetingKey())},</Text>
             <Text style={styles.name}>{firstName(patient?.full_name)}</Text>
           </View>
           <Avatar name={patient?.full_name ?? 'Me'} size={46} />
@@ -84,11 +84,11 @@ export default function HomeScreen({
         <FadeInUp delay={60}>
           <Pressable onPress={onStartTriage} style={({ pressed }) => [styles.hero, pressed && { transform: [{ scale: 0.985 }] }]}>
             <View style={{ flex: 1, paddingRight: 6 }}>
-              <Text style={styles.heroKicker}>Health assistant</Text>
-              <Text style={styles.heroTitle}>How are you feeling today?</Text>
-              <Text style={styles.heroSub}>Describe your symptoms — we'll match you with the right specialist.</Text>
+              <Text style={styles.heroKicker}>{t('home.assistant')}</Text>
+              <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
+              <Text style={styles.heroSub}>{t('home.heroSub')}</Text>
               <View style={styles.heroBtn}>
-                <Text style={styles.heroBtnText}>Start a chat</Text>
+                <Text style={styles.heroBtnText}>{t('home.startChat')}</Text>
                 <Feather name="arrow-right" size={15} color="#fff" />
               </View>
             </View>
@@ -101,17 +101,17 @@ export default function HomeScreen({
           <View style={styles.trustRow}>
             <View style={styles.trustItem}>
               <Feather name="shield" size={13} color={colors.textMuted} />
-              <Text style={styles.trustText}>Licensed doctors</Text>
+              <Text style={styles.trustText}>{t('home.trustLicensed')}</Text>
             </View>
             <View style={styles.trustDot} />
             <View style={styles.trustItem}>
               <Feather name="lock" size={13} color={colors.textMuted} />
-              <Text style={styles.trustText}>Private and secure</Text>
+              <Text style={styles.trustText}>{t('home.trustPrivate')}</Text>
             </View>
             <View style={styles.trustDot} />
             <View style={styles.trustItem}>
               <Feather name="clock" size={13} color={colors.textMuted} />
-              <Text style={styles.trustText}>Assistant 24/7</Text>
+              <Text style={styles.trustText}>{t('home.trustAlways')}</Text>
             </View>
           </View>
         </FadeInUp>
@@ -123,12 +123,12 @@ export default function HomeScreen({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                 <View style={styles.dateBox}>
                   <Text style={styles.dateBoxDay}>{new Date(`${nextVisit.appointment_date}T00:00:00`).getDate()}</Text>
-                  <Text style={styles.dateBoxMon}>{new Date(`${nextVisit.appointment_date}T00:00:00`).toLocaleDateString('en-US', { month: 'short' })}</Text>
+                  <Text style={styles.dateBoxMon}>{new Date(`${nextVisit.appointment_date}T00:00:00`).toLocaleDateString(locale, { month: 'short' })}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={type.label}>Next visit</Text>
+                  <Text style={type.label}>{t('home.nextVisit')}</Text>
                   <Text style={[type.h2, { marginTop: 3 }]} numberOfLines={1}>{nextVisit.doctor_name}</Text>
-                  <Text style={[type.sub, { marginTop: 2 }]}>{fmtDate(nextVisit.appointment_date)} · {nextVisit.start_time.slice(0, 5)}</Text>
+                  <Text style={[type.sub, { marginTop: 2 }]}>{new Date(`${nextVisit.appointment_date}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })} · {nextVisit.start_time.slice(0, 5)}</Text>
                 </View>
                 <Feather name="chevron-right" size={20} color={colors.textFaint} />
               </View>
@@ -140,7 +140,7 @@ export default function HomeScreen({
         {specialties.length > 0 && (
           <FadeInUp delay={180}>
             <View style={{ marginTop: 28 }}>
-              <SectionHeader title="Specialties" />
+              <SectionHeader title={t('home.specialties')} />
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 8 }}>
                 {specialties.map(([slug, name]) => (
                   <Pressable key={slug} onPress={onOpenDoctors} style={({ pressed }) => [styles.specChip, pressed && { backgroundColor: colors.brandSofter }]}>
@@ -156,17 +156,17 @@ export default function HomeScreen({
         {/* Doctors */}
         <FadeInUp delay={240}>
           <View style={{ marginTop: 28 }}>
-            <SectionHeader title="Top doctors" action="See all" onAction={onOpenDoctors} />
+            <SectionHeader title={t('home.topDoctors')} action={t('home.seeAll')} onAction={onOpenDoctors} />
             {doctors.slice(0, 4).map((d) => (
               <Card key={d.id} onPress={() => onPickDoctor(d)} style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <Avatar name={d.full_name} size={50} />
                   <View style={{ flex: 1 }}>
                     <Text style={type.h2} numberOfLines={1}>{d.full_name}</Text>
-                    <Text style={[type.sub, { marginTop: 2 }]}>{d.specialty_name ?? d.specialty ?? 'Specialist'}</Text>
+                    <Text style={[type.sub, { marginTop: 2 }]}>{d.specialty_name ?? d.specialty ?? t('common.specialist')}</Text>
                     <View style={{ marginTop: 4 }}><Rating rating={d.rating} count={d.review_count} /></View>
                   </View>
-                  <View style={styles.bookPill}><Text style={styles.bookPillText}>Book</Text></View>
+                  <View style={styles.bookPill}><Text style={styles.bookPillText}>{t('common.book')}</Text></View>
                 </View>
               </Card>
             ))}

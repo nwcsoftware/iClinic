@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { getMyAppointments, cancelAppointment, type Appointment } from '../lib/api'
 import { colors, radius, statusColors, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { Avatar, Badge, Card, EmptyState, GhostButton } from '../components/ui'
 import { FadeInUp } from '../components/motion'
 import { notify } from '../lib/notify'
@@ -19,6 +20,7 @@ function isUpcoming(a: Appointment): boolean {
 
 export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
   const insets = useSafeAreaInsets()
+  const { t, locale } = useI18n()
   const [appts, setAppts] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -41,7 +43,7 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
       setConfirmId(null)
       load()
     } catch (e) {
-      notify('Could not cancel', e instanceof Error ? e.message : 'Unknown error')
+      notify(t('visits.cancelFailed'), e instanceof Error ? e.message : undefined)
     } finally {
       setCancellingId(null)
     }
@@ -52,12 +54,12 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingTop: Math.max(insets.top, Platform.OS === 'web' ? 20 : 14) + 8, paddingHorizontal: 20 }}>
-        <Text style={type.h1}>My visits</Text>
+        <Text style={type.h1}>{t('visits.title')}</Text>
         <View style={styles.tabs}>
-          {(['upcoming', 'past'] as Tab[]).map((t) => (
-            <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabActive]}>
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                {t === 'upcoming' ? 'Upcoming' : 'Past'}
+          {(['upcoming', 'past'] as Tab[]).map((tb) => (
+            <Pressable key={tb} onPress={() => setTab(tb)} style={[styles.tab, tab === tb && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === tb && styles.tabTextActive]}>
+                {tb === 'upcoming' ? t('visits.upcoming') : t('visits.past')}
               </Text>
             </Pressable>
           ))}
@@ -76,10 +78,10 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
             <View>
               <EmptyState
                 icon={tab === 'upcoming' ? 'calendar' : 'archive'}
-                title={tab === 'upcoming' ? 'No upcoming visits' : 'No past visits'}
-                sub={tab === 'upcoming' ? 'Book a visit with a specialist in a couple of taps.' : undefined}
+                title={tab === 'upcoming' ? t('visits.noUpcoming') : t('visits.noPast')}
+                sub={tab === 'upcoming' ? t('visits.noUpcomingSub') : undefined}
               />
-              {tab === 'upcoming' && <GhostButton label="Find a doctor" onPress={onBook} style={{ marginHorizontal: 40 }} />}
+              {tab === 'upcoming' && <GhostButton label={t('visits.findDoctor')} onPress={onBook} style={{ marginHorizontal: 40 }} />}
             </View>
           ) : (
             shown.map((a, i) => {
@@ -94,13 +96,13 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
                       <Text style={type.h2} numberOfLines={1}>{a.doctor_name}</Text>
                       {a.specialty_name ? <Text style={[type.sub, { marginTop: 1 }]}>{a.specialty_name}</Text> : null}
                     </View>
-                    <Badge label={sc.label} bg={sc.bg} fg={sc.fg} />
+                    <Badge label={t(('status.' + a.status) as never)} bg={sc.bg} fg={sc.fg} />
                   </View>
 
                   <View style={styles.metaRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Feather name="calendar" size={14} color={colors.textMuted} />
-                      <Text style={styles.metaItem}>{new Date(`${a.appointment_date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+                      <Text style={styles.metaItem}>{new Date(`${a.appointment_date}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Feather name="clock" size={14} color={colors.textMuted} />
@@ -112,19 +114,19 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
                   {canCancel && (
                     confirmId === a.id ? (
                       <View style={styles.cancelRow}>
-                        <Text style={[type.sub, { flex: 1 }]}>Cancel this visit?</Text>
+                        <Text style={[type.sub, { flex: 1 }]}>{t('visits.confirmCancel')}</Text>
                         <Pressable onPress={() => setConfirmId(null)} style={styles.keepBtn}>
-                          <Text style={{ color: colors.textMuted, fontWeight: '700', fontSize: 13 }}>Keep</Text>
+                          <Text style={{ color: colors.textMuted, fontWeight: '700', fontSize: 13 }}>{t('visits.keep')}</Text>
                         </Pressable>
                         <Pressable onPress={() => handleCancel(a.id)} style={styles.confirmCancelBtn} disabled={cancellingId === a.id}>
                           {cancellingId === a.id
                             ? <ActivityIndicator color="#fff" size="small" />
-                            : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Yes, cancel</Text>}
+                            : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('visits.yesCancel')}</Text>}
                         </Pressable>
                       </View>
                     ) : (
                       <Pressable onPress={() => setConfirmId(a.id)} hitSlop={6} style={{ marginTop: 12, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: colors.danger, fontWeight: '700', fontSize: 13 }}>Cancel visit</Text>
+                        <Text style={{ color: colors.danger, fontWeight: '700', fontSize: 13 }}>{t('visits.cancel')}</Text>
                       </Pressable>
                     )
                   )}

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { getSlots, book, type Doctor } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { Avatar, PrimaryButton, Rating, TopBar } from '../components/ui'
 import { FadeInUp, ScaleIn } from '../components/motion'
 import { notify } from '../lib/notify'
@@ -36,6 +37,7 @@ export default function BookingScreen({
   onDone: () => void
 }) {
   const insets = useSafeAreaInsets()
+  const { t, locale } = useI18n()
   const days = nextDays(14)
   const [selectedDate, setSelectedDate] = useState(ymd(days[0]))
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
@@ -62,7 +64,7 @@ export default function BookingScreen({
       await book({ doctor_id: doctor.id, date: selectedDate, start_time: selectedSlot, reason: reason || undefined })
       setBooked({ date: selectedDate, slot: selectedSlot })
     } catch (e) {
-      notify('Could not book', e instanceof Error ? e.message : 'Unknown error')
+      notify(t('booking.failed'), e instanceof Error ? e.message : undefined)
       loadSlots(selectedDate)
     } finally {
       setSaving(false)
@@ -78,12 +80,12 @@ export default function BookingScreen({
             <ScaleIn delay={120}>
               <View style={styles.successIcon}><Feather name="check" size={34} color={colors.success} /></View>
             </ScaleIn>
-            <Text style={[type.h1, { textAlign: 'center', marginTop: 18 }]}>You're booked</Text>
+            <Text style={[type.h1, { textAlign: 'center', marginTop: 18 }]}>{t('booking.booked')}</Text>
             <Text style={[type.sub, { textAlign: 'center', marginTop: 8 }]}>
               {doctor.full_name}{'\n'}
-              {new Date(`${booked.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at {booked.slot}
+              {new Date(`${booked.date}T00:00:00`).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })} at {booked.slot}
             </Text>
-            <PrimaryButton label="View my visits" onPress={onDone} style={{ marginTop: 24, alignSelf: 'stretch' }} />
+            <PrimaryButton label={t('booking.viewVisits')} onPress={onDone} style={{ marginTop: 24, alignSelf: 'stretch' }} />
           </View>
         </FadeInUp>
       </View>
@@ -92,7 +94,7 @@ export default function BookingScreen({
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Book appointment" onBack={onBack} />
+      <TopBar title={t('booking.title')} onBack={onBack} />
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         {/* Doctor summary */}
@@ -101,14 +103,14 @@ export default function BookingScreen({
             <Avatar name={doctor.full_name} size={52} />
             <View style={{ flex: 1 }}>
               <Text style={type.h2} numberOfLines={1}>{doctor.full_name}</Text>
-              <Text style={[type.sub, { marginTop: 2 }]}>{doctor.specialty_name ?? doctor.specialty ?? 'Specialist'}</Text>
+              <Text style={[type.sub, { marginTop: 2 }]}>{doctor.specialty_name ?? doctor.specialty ?? t('common.specialist')}</Text>
               <View style={{ marginTop: 3 }}><Rating rating={doctor.rating} count={doctor.review_count} /></View>
             </View>
           </View>
         </FadeInUp>
 
         {/* Day picker */}
-        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>Choose a day</Text>
+        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>{t('booking.chooseDay')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 9, paddingVertical: 2 }}>
           {days.map((d) => {
             const key = ymd(d)
@@ -124,7 +126,7 @@ export default function BookingScreen({
         </ScrollView>
 
         {/* Slots */}
-        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>Available times</Text>
+        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>{t('booking.times')}</Text>
         {loadingSlots ? (
           <ActivityIndicator color={colors.brand} style={{ marginVertical: 28 }} />
         ) : slots.length === 0 ? (
@@ -147,10 +149,10 @@ export default function BookingScreen({
         )}
 
         {/* Reason */}
-        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>Reason for visit (optional)</Text>
+        <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>{t('booking.reason')}</Text>
         <TextInput
           style={styles.reason}
-          placeholder="Briefly describe the reason…"
+          placeholder={t('booking.reasonPlaceholder')}
           placeholderTextColor={colors.textFaint}
           value={reason}
           onChangeText={setReason}
@@ -161,10 +163,10 @@ export default function BookingScreen({
       {/* Confirm bar */}
       <View style={[styles.confirmBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <View style={{ flex: 1 }}>
-          <Text style={type.small}>{selectedSlot ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Pick a time'}</Text>
+          <Text style={type.small}>{selectedSlot ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }) : t('booking.pickTime')}</Text>
           <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink }}>{selectedSlot ?? '—'}</Text>
         </View>
-        <PrimaryButton label="Confirm booking" onPress={confirm} loading={saving} disabled={!selectedSlot} style={{ paddingHorizontal: 22 }} />
+        <PrimaryButton label={t('booking.confirm')} onPress={confirm} loading={saving} disabled={!selectedSlot} style={{ paddingHorizontal: 22 }} />
       </View>
     </View>
   )

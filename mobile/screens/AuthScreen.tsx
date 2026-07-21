@@ -7,6 +7,7 @@ import { MaterialCommunityIcons, Feather } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'
 import { loginWithPassword } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 import { AmbientBackground, FadeInUp } from '../components/motion'
 
 // Endless soft pulse ring behind the logo — the login page breathes.
@@ -35,6 +36,7 @@ function LogoPulse() {
 // doctor / doctor123   →  doctor mode
 // patient / patient123 →  patient mode
 export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
+  const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -42,7 +44,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   const [error, setError] = useState('')
 
   async function handleLogin() {
-    if (!username.trim() || !password) { setError('Enter your username and password.'); return }
+    if (!username.trim() || !password) { setError(t('auth.enterBoth')); return }
     setError('')
     setLoading(true)
     try {
@@ -57,11 +59,11 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
         session = data.session
         if (!session) await new Promise((r) => setTimeout(r, 120))
       }
-      if (!session) throw new Error('Could not save your session. Try again.')
+      if (!session) throw new Error(t('auth.sessionFailed'))
 
       onAuthed()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign in failed. Try again.')
+      setError(e instanceof Error ? e.message : t('auth.failed'))
     } finally {
       setLoading(false)
     }
@@ -76,17 +78,17 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
             <LogoPulse />
             <View style={styles.logo}><MaterialCommunityIcons name="hospital" size={32} color="#fff" /></View>
           </View>
-          <Text style={styles.appName}>iClinic</Text>
-          <Text style={styles.tagline}>The right doctor, in minutes.{'\n'}Describe how you feel — we handle the rest.</Text>
+          <Text style={styles.appName}>{t('app.name')}</Text>
+          <Text style={styles.tagline}>{t('app.tagline')}</Text>
         </View>
       </FadeInUp>
 
       <FadeInUp delay={100}>
         <View style={styles.card}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>{t('auth.username')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="doctor or patient"
+            placeholder={t('auth.usernamePlaceholder')}
             placeholderTextColor={colors.textFaint}
             autoCapitalize="none"
             autoCorrect={false}
@@ -95,7 +97,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
             editable={!loading}
           />
 
-          <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+          <Text style={[styles.label, { marginTop: 16 }]}>{t('auth.password')}</Text>
           <View style={styles.passWrap}>
             <TextInput
               style={styles.passInput}
@@ -119,7 +121,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
             disabled={loading}
             style={({ pressed }) => [styles.button, pressed && { backgroundColor: colors.brandDark }, loading && { opacity: 0.6 }]}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.signIn')}</Text>}
           </Pressable>
 
           {error ? (
@@ -130,14 +132,14 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           ) : null}
 
           <View style={styles.hintBox}>
-            <Text style={styles.hintTitle}>Test accounts</Text>
+            <Text style={styles.hintTitle}>{t('auth.testAccounts')}</Text>
             <Text style={styles.hintLine}>doctor  ·  doctor123</Text>
             <Text style={styles.hintLine}>patient  ·  patient123</Text>
           </View>
         </View>
       </FadeInUp>
 
-      <Text style={styles.footer}>Not for emergencies. If this is urgent, call your local emergency number.</Text>
+      <Text style={styles.footer}>{t('auth.emergencyNote')}</Text>
     </KeyboardAvoidingView>
   )
 }

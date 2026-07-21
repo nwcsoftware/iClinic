@@ -3,9 +3,11 @@ import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Feather } from '@expo/vector-icons'
 import { getMyPatient, updateMyPatient, type PatientInfo } from '../lib/api'
 import { signOut } from '../lib/supabase'
 import { colors, radius, type } from '../lib/theme'
+import { useI18n, LANGUAGES, type Lang } from '../lib/i18n'
 import { Avatar, Card, PrimaryButton } from '../components/ui'
 import { notify } from '../lib/notify'
 
@@ -17,6 +19,7 @@ export default function ProfileScreen({
   onPatientUpdated: (p: PatientInfo) => void
 }) {
   const insets = useSafeAreaInsets()
+  const { t, lang, setLang, isRTL } = useI18n()
   const [patient, setPatient] = useState<PatientInfo | null>(initial)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(initial?.full_name ?? '')
@@ -32,7 +35,7 @@ export default function ProfileScreen({
   }, [initial])
 
   async function save() {
-    if (!name.trim() || mobile.trim().length < 6) { notify('Enter a valid name and mobile number'); return }
+    if (!name.trim() || mobile.trim().length < 6) { notify(t('profile.invalid')); return }
     setSaving(true)
     try {
       await updateMyPatient({ full_name: name.trim(), mobile_number: mobile.trim() })
@@ -41,7 +44,7 @@ export default function ProfileScreen({
       onPatientUpdated(updated)
       setEditing(false)
     } catch (e) {
-      notify('Could not save', e instanceof Error ? e.message : 'Unknown error')
+      notify(t('profile.saveFailed'), e instanceof Error ? e.message : undefined)
     } finally {
       setSaving(false)
     }
@@ -53,7 +56,7 @@ export default function ProfileScreen({
       contentContainerStyle={{ padding: 20, paddingTop: Math.max(insets.top, Platform.OS === 'web' ? 20 : 14) + 8, paddingBottom: 110 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={type.h1}>Profile</Text>
+      <Text style={[type.h1, isRTL && { textAlign: 'right' }]}>{t('profile.title')}</Text>
 
       <View style={{ alignItems: 'center', marginTop: 22, marginBottom: 20 }}>
         <Avatar name={patient?.full_name ?? 'Me'} size={84} />
@@ -61,44 +64,72 @@ export default function ProfileScreen({
         {patient?.email ? <Text style={[type.sub, { marginTop: 4 }]}>{patient.email}</Text> : null}
       </View>
 
+      {/* Language */}
+      <Card style={{ marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+          <Feather name="globe" size={17} color={colors.brand} />
+          <Text style={type.h2}>{t('profile.language')}</Text>
+        </View>
+        <View style={{ gap: 8 }}>
+          {LANGUAGES.map((l) => {
+            const active = l.code === lang
+            return (
+              <Pressable
+                key={l.code}
+                onPress={() => setLang(l.code as Lang)}
+                style={({ pressed }) => [
+                  styles.langRow,
+                  active && { borderColor: colors.brand, backgroundColor: colors.brandSofter },
+                  pressed && { backgroundColor: colors.brandSoft },
+                ]}
+              >
+                <Text style={[styles.langNative, active && { color: colors.brand }]}>{l.native}</Text>
+                <Text style={styles.langLabel}>{l.label}</Text>
+                {active
+                  ? <Feather name="check-circle" size={18} color={colors.brand} />
+                  : <View style={{ width: 18 }} />}
+              </Pressable>
+            )
+          })}
+        </View>
+      </Card>
+
       <Card>
         {editing ? (
           <View>
-            <Text style={type.label}>Full name</Text>
-            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full name" placeholderTextColor={colors.textFaint} />
-            <Text style={[type.label, { marginTop: 16 }]}>Mobile number</Text>
-            <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" placeholder="+961 xx xxx xxx" placeholderTextColor={colors.textFaint} />
+            <Text style={type.label}>{t('profile.fullName')}</Text>
+            <TextInput style={styles.input} value={name} onChangeText={setName} placeholderTextColor={colors.textFaint} />
+            <Text style={[type.label, { marginTop: 16 }]}>{t('profile.mobile')}</Text>
+            <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" placeholderTextColor={colors.textFaint} />
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
               <Pressable onPress={() => { setEditing(false); setName(patient?.full_name ?? ''); setMobile(patient?.mobile_number ?? '') }} style={styles.cancelBtn}>
-                <Text style={{ color: colors.textMuted, fontWeight: '700' }}>Cancel</Text>
+                <Text style={{ color: colors.textMuted, fontWeight: '700' }}>{t('profile.cancel')}</Text>
               </Pressable>
-              <PrimaryButton label="Save" onPress={save} loading={saving} style={{ flex: 1 }} />
+              <PrimaryButton label={t('profile.save')} onPress={save} loading={saving} style={{ flex: 1 }} />
             </View>
           </View>
         ) : (
           <View>
-            <Row label="Full name" value={patient?.full_name ?? '—'} />
-            <Row label="Mobile" value={patient?.mobile_number ?? '—'} />
-            <Row label="Email" value={patient?.email ?? '—'} last />
+            <Row label={t('profile.fullName')} value={patient?.full_name ?? '—'} />
+            <Row label={t('profile.mobile')} value={patient?.mobile_number ?? '—'} />
+            <Row label={t('profile.email')} value={patient?.email ?? '—'} last />
             <Pressable onPress={() => setEditing(true)} style={styles.editBtn}>
-              <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 14 }}>Edit details</Text>
+              <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 14 }}>{t('profile.edit')}</Text>
             </Pressable>
           </View>
         )}
       </Card>
 
       <Card style={{ marginTop: 16 }}>
-        <Row label="About" value="iClinic patient app" />
-        <Text style={[type.sub, { marginTop: 4 }]}>
-          The health assistant offers guidance only — it does not provide medical diagnosis. In an emergency, call your local emergency number.
-        </Text>
+        <Row label={t('profile.about')} value={t('profile.aboutValue')} />
+        <Text style={[type.sub, { marginTop: 4 }]}>{t('profile.aboutBody')}</Text>
       </Card>
 
       <Pressable
         onPress={async () => { await signOut(); onSignedOut() }}
         style={({ pressed }) => [styles.signOut, pressed && { backgroundColor: colors.dangerBg }]}
       >
-        <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 15 }}>Sign out</Text>
+        <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 15 }}>{t('profile.signOut')}</Text>
       </Pressable>
     </ScrollView>
   )
@@ -132,6 +163,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: colors.border,
   },
+  langRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md,
+    paddingVertical: 12, paddingHorizontal: 14,
+  },
+  langNative: { fontSize: 15.5, fontWeight: '700', color: colors.ink, minWidth: 82 },
+  langLabel: { flex: 1, fontSize: 13, color: colors.textMuted },
   signOut: {
     marginTop: 20, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center',
     borderWidth: 1.5, borderColor: '#F3D2D2', backgroundColor: colors.card,

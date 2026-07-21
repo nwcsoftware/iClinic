@@ -89,11 +89,15 @@ export async function loginWithPassword(
 }
 
 // --- AI triage (session-aware; every message is persisted server-side) ---
-export async function triage(messages: ChatMessage[], sessionId?: string | null): Promise<TriageResponse> {
+export async function triage(
+  messages: ChatMessage[],
+  sessionId?: string | null,
+  lang: string = 'en',
+): Promise<TriageResponse> {
   const res = await fetch(`${API_URL}/api/triage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ messages, session_id: sessionId ?? null }),
+    body: JSON.stringify({ messages, session_id: sessionId ?? null, lang }),
   })
   return jsonOrThrow(res)
 }

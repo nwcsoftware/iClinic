@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator, StyleSheet, Platform, useWind
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
+import { I18nProvider, useI18n } from './lib/i18n'
 import { supabase } from './lib/supabase'
 import { initPatient, type Doctor, type PatientInfo } from './lib/api'
 import { getDoctorMe, type DoctorMe } from './lib/doctorApi'
@@ -27,10 +28,10 @@ type Overlay = { kind: 'triage' } | { kind: 'booking'; doctor: Doctor; reason: s
 type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor'
 
 const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
-  { key: 'home', icon: 'home', label: 'Home' },
-  { key: 'doctors', icon: 'users', label: 'Doctors' },
-  { key: 'visits', icon: 'calendar', label: 'Visits' },
-  { key: 'profile', icon: 'user', label: 'Profile' },
+  { key: 'home', icon: 'home', label: 'tab.home' },
+  { key: 'doctors', icon: 'users', label: 'tab.doctors' },
+  { key: 'visits', icon: 'calendar', label: 'tab.visits' },
+  { key: 'profile', icon: 'user', label: 'tab.profile' },
 ]
 
 const DOCTOR_TABS: { key: DoctorTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
@@ -50,6 +51,8 @@ function TabBar<T extends string>({
   accentSoft: string
 }) {
   const insets = useSafeAreaInsets()
+  const { t } = useI18n()
+  const label = (l: string) => (l.startsWith('tab.') ? t(l as never) : l)
   return (
     <View style={[styles.tabbar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {tabs.map((t) => {
@@ -59,7 +62,7 @@ function TabBar<T extends string>({
             <View style={[styles.tabIconWrap, active && { backgroundColor: accentSoft }]}>
               <Feather name={t.icon} size={19} color={active ? accent : colors.tabInactive} />
             </View>
-            <Text style={[styles.tabLabel, active && { color: accent, fontWeight: '800' }]}>{t.label}</Text>
+            <Text style={[styles.tabLabel, active && { color: accent, fontWeight: '800' }]}>{label(t.label)}</Text>
           </Pressable>
         )
       })}
@@ -213,6 +216,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <I18nProvider>
       <StatusBar style="dark" />
       {framed ? (
         <View style={styles.frameOuter}>
@@ -225,6 +229,7 @@ export default function App() {
           <Main />
         </View>
       )}
+      </I18nProvider>
     </SafeAreaProvider>
   )
 }
