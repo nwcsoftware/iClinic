@@ -75,6 +75,19 @@ export async function devLogin(email: string): Promise<{ access_token: string; r
   return jsonOrThrow(res)
 }
 
+// --- Username + password login (testing accounts). Returns session tokens. ---
+export async function loginWithPassword(
+  username: string,
+  password: string,
+): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_URL}/api/auth/simple-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  return jsonOrThrow(res)
+}
+
 // --- AI triage (session-aware; every message is persisted server-side) ---
 export async function triage(messages: ChatMessage[], sessionId?: string | null): Promise<TriageResponse> {
   const res = await fetch(`${API_URL}/api/triage`, {
