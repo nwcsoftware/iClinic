@@ -39,11 +39,34 @@ export async function GET(request: Request) {
       }
     }
 
-    const appointments = (appts ?? []).map((a) => ({
-      ...a,
-      doctor_name: names.get(a.doctor_id)?.full_name ?? 'Doctor',
-      specialty_name: names.get(a.doctor_id)?.specialty_name ?? null,
-    }))
+    // Which of these visits has the patient already rated?
+    const reviews = new Map<string, { rating: number; comment: string | null }>()
+    const apptIds = (appts ?? []).map((a) => a.id)
+    if (apptIds.length > 0) {
+      const { data: rows, error: revErr } = await admin
+        .from('doctor_reviews')
+        .select('appointment_id, rating, comment')
+        .in('appointment_id', apptIds)
+      // Reviews not enabled yet -> nothing to merge, everything else still works.
+      if (!revErr) {
+        for (const r of rows ?? []) reviews.set(r.appointment_id, { rating: r.rating, comment: r.comment })
+      }
+    }
+
+    const now = Date.now()
+    const appointments = (appts ?? []).map((a) => {
+      const review = reviews.get(a.id) ?? null
+      const isPast = new Date(`${a.appointment_date}T${a.start_time}`).getTime() <= now
+      return {
+        ...a,
+        doctor_name: names.get(a.doctor_id)?.full_name ?? 'Doctor',
+        specialty_name: names.get(a.doctor_id)?.specialty_name ?? null,
+        my_rating: review?.rating ?? null,
+        my_comment: review?.comment ?? null,
+        // Only a visit that actually happened can be rated.
+        can_review: isPast && a.status !== 'cancelled' && a.status !== 'no_show',
+      }
+    })
 
     return NextResponse.json({ appointments })
   } catch (err) {

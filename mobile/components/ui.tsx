@@ -137,14 +137,54 @@ export function EmptyState({ icon, title, sub }: { icon: keyof typeof Feather.gl
   )
 }
 
-// Star + numeric rating (renders nothing until ratings are migrated).
-export function Rating({ rating, count }: { rating?: number | null; count?: number | null }) {
-  if (rating == null) return null
+// Star + numeric rating. A doctor with no reviews yet is shown as "New"
+// rather than a fake score.
+export function Rating({
+  rating, count, showNew = true,
+}: { rating?: number | null; count?: number | null; showNew?: boolean }) {
+  if (rating == null || !count) {
+    if (!showNew) return null
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <MaterialCommunityIcons name="star-outline" size={14} color={colors.textFaint} />
+        <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.textFaint }}>No reviews yet</Text>
+      </View>
+    )
+  }
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <MaterialCommunityIcons name="star" size={14} color={colors.star} />
       <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.text }}>{Number(rating).toFixed(1)}</Text>
-      {count ? <Text style={{ fontSize: 12, color: colors.textFaint }}>({count})</Text> : null}
+      <Text style={{ fontSize: 12, color: colors.textFaint }}>
+        ({count} review{count === 1 ? '' : 's'})
+      </Text>
+    </View>
+  )
+}
+
+// Tappable stars. Read-only when onChange is omitted.
+export function StarRating({
+  value, onChange, size = 32,
+}: { value: number; onChange?: (v: number) => void; size?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 6 }}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const filled = n <= value
+        const star = (
+          <MaterialCommunityIcons
+            name={filled ? 'star' : 'star-outline'}
+            size={size}
+            color={filled ? colors.star : colors.borderStrong}
+          />
+        )
+        if (!onChange) return <View key={n}>{star}</View>
+        return (
+          <Pressable key={n} onPress={() => onChange(n)} hitSlop={6}
+            style={({ pressed }) => [pressed && { transform: [{ scale: 0.88 }] }]}>
+            {star}
+          </Pressable>
+        )
+      })}
     </View>
   )
 }

@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Platform,
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Platform,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { getMyAppointments, cancelAppointment, type Appointment } from '../lib/api'
+import { getMyAppointments, cancelAppointment, submitReview, type Appointment } from '../lib/api'
 import { colors, radius, statusColors, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
-import { Avatar, Badge, Card, EmptyState, GhostButton } from '../components/ui'
+import { Avatar, Badge, Card, EmptyState, GhostButton, StarRating } from '../components/ui'
 import { FadeInUp } from '../components/motion'
 import { notify } from '../lib/notify'
 
@@ -111,6 +111,10 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
                   </View>
                   {a.reason ? <Text style={[type.sub, { marginTop: 8, fontStyle: 'italic' }]} numberOfLines={2}>“{a.reason}”</Text> : null}
 
+                  {a.can_review ? (
+                    <ReviewBlock appointment={a} onSaved={load} />
+                  ) : null}
+
                   {canCancel && (
                     confirmId === a.id ? (
                       <View style={styles.cancelRow}>
@@ -141,7 +145,97 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
   )
 }
 
+// Rate a past visit, or edit a rating already given.
+function ReviewBlock({ appointment, onSaved }: { appointment: Appointment; onSaved: () => void }) {
+  const { t } = useI18n()
+  const already = appointment.my_rating ?? 0
+  const [editing, setEditing] = useState(already === 0)
+  const [rating, setRating] = useState(already)
+  const [comment, setComment] = useState(appointment.my_comment ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    if (rating < 1) return
+    setSaving(true)
+    try {
+      await submitReview({ appointment_id: appointment.id, rating, comment: comment.trim() || undefined })
+      setEditing(false)
+      onSaved()
+    } catch (e) {
+      notify(t('reviews.failed'), e instanceof Error ? e.message : undefined)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <View style={styles.reviewDone}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.reviewDoneLabel}>{t('reviews.yourRating')}</Text>
+          <View style={{ marginTop: 5 }}><StarRating value={rating} size={17} /></View>
+        </View>
+        <Pressable onPress={() => setEditing(true)} hitSlop={8}>
+          <Text style={{ color: colors.brand, fontWeight: '700', fontSize: 13 }}>{t('reviews.edit')}</Text>
+        </Pressable>
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.reviewBox}>
+      <Text style={type.h2}>{t('reviews.rateVisit')}</Text>
+      <Text style={[type.sub, { marginTop: 2 }]}>{t('reviews.rateSub')}</Text>
+      <View style={{ alignItems: 'center', marginTop: 14 }}>
+        <StarRating value={rating} onChange={setRating} />
+      </View>
+      {rating > 0 ? (
+        <>
+          <TextInput
+            style={styles.reviewInput}
+            placeholder={t('reviews.comment')}
+            placeholderTextColor={colors.textFaint}
+            value={comment}
+            onChangeText={setComment}
+            multiline
+            maxLength={1000}
+          />
+          <Pressable
+            onPress={save}
+            disabled={saving}
+            style={({ pressed }) => [styles.reviewBtn, pressed && { backgroundColor: colors.brandDark }, saving && { opacity: 0.6 }]}
+          >
+            {saving
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14.5 }}>{t('reviews.submit')}</Text>}
+          </Pressable>
+        </>
+      ) : null}
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
+  reviewBox: {
+    marginTop: 14, paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  reviewInput: {
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: 14, paddingVertical: 11, marginTop: 14,
+    fontSize: 14.5, color: colors.ink, backgroundColor: '#FAFBFD',
+    minHeight: 62, textAlignVertical: 'top',
+  },
+  reviewBtn: {
+    backgroundColor: colors.brand, borderRadius: radius.md, paddingVertical: 13,
+    alignItems: 'center', justifyContent: 'center', marginTop: 12, minHeight: 46,
+  },
+  reviewDone: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginTop: 14, paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  reviewDoneLabel: { fontSize: 12.5, color: colors.textMuted, fontWeight: '600' },
   tabs: {
     flexDirection: 'row', backgroundColor: '#E9ECF3', borderRadius: radius.md,
     padding: 4, marginTop: 16, marginBottom: 4,

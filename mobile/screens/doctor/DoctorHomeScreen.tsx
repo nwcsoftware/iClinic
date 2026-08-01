@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, Platform, Image, Animated, Easing,
+  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, Platform, Image, Animated, Easing, ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { getDoctorOverview, type DoctorMe, type DoctorOverview } from '../../lib/doctorApi'
+import { getDoctorOverview, setAppointmentStatus, type DoctorMe, type DoctorOverview } from '../../lib/doctorApi'
 import { colors, radius, shadow, statusColors, type } from '../../lib/theme'
 import { Badge, Card } from '../../components/ui'
 import { DoctorAmbient, FadeInUp } from '../../components/motion'
@@ -42,6 +42,7 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
   const insets = useSafeAreaInsets()
   const [data, setData] = useState<DoctorOverview | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try { setData(await getDoctorOverview()) }
@@ -50,6 +51,13 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function mark(id: string, status: 'completed' | 'no_show') {
+    setBusyId(id)
+    try { await setAppointmentStatus(id, status); await load() }
+    catch { /* surfaced by the unchanged status badge */ }
+    finally { setBusyId(null) }
+  }
 
   const maxCount = Math.max(1, ...(data?.days ?? []).map((d) => d.count))
 
@@ -139,6 +147,26 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
                           </View>
                           <Badge label={sc.label} bg={sc.bg} fg={sc.fg} />
                         </View>
+
+                        {a.status === 'scheduled' || a.status === 'in_progress' ? (
+                          <View style={styles.actionRow}>
+                            {busyId === a.id ? (
+                              <ActivityIndicator size="small" color={colors.doc} />
+                            ) : (
+                              <>
+                                <Pressable onPress={() => mark(a.id, 'completed')}
+                                  style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]}>
+                                  <Feather name="check" size={14} color="#fff" />
+                                  <Text style={styles.doneText}>Completed</Text>
+                                </Pressable>
+                                <Pressable onPress={() => mark(a.id, 'no_show')}
+                                  style={({ pressed }) => [styles.noShowBtn, pressed && { opacity: 0.7 }]}>
+                                  <Text style={styles.noShowText}>No show</Text>
+                                </Pressable>
+                              </>
+                            )}
+                          </View>
+                        ) : null}
                       </Card>
                     </FadeInUp>
                   )
@@ -153,6 +181,20 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
 }
 
 const styles = StyleSheet.create({
+  actionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 12, paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  doneBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.doc, borderRadius: radius.full, paddingVertical: 8, paddingHorizontal: 14,
+  },
+  doneText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  noShowBtn: {
+    borderRadius: radius.full, paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  noShowText: { color: colors.textMuted, fontWeight: '700', fontSize: 13 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 18 },
   greet: { fontSize: 15, color: colors.textMuted, fontWeight: '500' },
   name: { fontSize: 25, fontWeight: '800', color: colors.ink, letterSpacing: -0.4, marginTop: 2 },

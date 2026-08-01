@@ -4,10 +4,10 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { getSlots, book, type Doctor } from '../lib/api'
+import { getSlots, book, getDoctorReviews, type Doctor, type DoctorReviews } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
-import { Avatar, PrimaryButton, Rating, TopBar } from '../components/ui'
+import { Avatar, PrimaryButton, Rating, StarRating, TopBar } from '../components/ui'
 import { FadeInUp, ScaleIn } from '../components/motion'
 import { notify } from '../lib/notify'
 
@@ -46,6 +46,11 @@ export default function BookingScreen({
   const [reason, setReason] = useState(initialReason)
   const [saving, setSaving] = useState(false)
   const [booked, setBooked] = useState<{ date: string; slot: string } | null>(null)
+  const [reviews, setReviews] = useState<DoctorReviews | null>(null)
+
+  useEffect(() => {
+    getDoctorReviews(doctor.id).then(setReviews).catch(() => {})
+  }, [doctor.id])
 
   const loadSlots = useCallback(async (date: string) => {
     setLoadingSlots(true)
@@ -108,6 +113,26 @@ export default function BookingScreen({
             </View>
           </View>
         </FadeInUp>
+
+        {/* What other patients said */}
+        {reviews && reviews.count > 0 ? (
+          <FadeInUp delay={60}>
+            <View style={{ marginTop: 18 }}>
+              <Text style={[type.label, { marginBottom: 10 }]}>{t('reviews.title')}</Text>
+              {reviews.reviews.slice(0, 3).map((r) => (
+                <View key={r.id} style={styles.reviewCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                    <StarRating value={r.rating} size={13} />
+                    <Text style={styles.reviewAuthor}>{r.author}</Text>
+                  </View>
+                  {r.comment ? (
+                    <Text style={[type.sub, { marginTop: 6 }]}>{r.comment}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </FadeInUp>
+        ) : null}
 
         {/* Day picker */}
         <Text style={[type.label, { marginTop: 24, marginBottom: 10 }]}>{t('booking.chooseDay')}</Text>
@@ -173,6 +198,11 @@ export default function BookingScreen({
 }
 
 const styles = StyleSheet.create({
+  reviewCard: {
+    backgroundColor: colors.card, borderRadius: radius.md, padding: 13, marginBottom: 9,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  reviewAuthor: { fontSize: 13, fontWeight: '700', color: colors.text },
   docCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: radius.lg, padding: 16, ...shadow.card,

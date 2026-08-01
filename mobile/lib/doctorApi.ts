@@ -129,3 +129,13 @@ export async function toggleDayOff(date: string): Promise<{ off: boolean }> {
   })
   return jsonOrThrow(res)
 }
+
+// --- Move a visit through its states (in_progress / completed / no_show) ---
+export async function setAppointmentStatus(id: string, status: 'in_progress' | 'completed' | 'no_show') {
+  const res = await fetch(`${API_URL}/api/doctor/appointments/${id}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ status }),
+  })
+  return jsonOrThrow(res)
+}

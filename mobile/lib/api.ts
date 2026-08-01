@@ -42,6 +42,24 @@ export type Appointment = {
   reason: string | null
   doctor_name?: string
   specialty_name?: string | null
+  my_rating?: number | null
+  my_comment?: string | null
+  can_review?: boolean
+}
+
+export type Review = {
+  id: string
+  rating: number
+  comment: string | null
+  created_at: string
+  author: string
+}
+
+export type DoctorReviews = {
+  reviews: Review[]
+  average: number | null
+  count: number
+  breakdown: Record<string, number>
 }
 
 export type PatientInfo = {
@@ -141,6 +159,22 @@ export async function updateMyPatient(input: { full_name?: string; mobile_number
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(input),
   })
+  return jsonOrThrow(res)
+}
+
+// --- Rate a visit (1-5). Editing re-submits the same appointment. ---
+export async function submitReview(input: { appointment_id: string; rating: number; comment?: string }) {
+  const res = await fetch(`${API_URL}/api/patient/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
+  })
+  return jsonOrThrow(res)
+}
+
+// --- Public reviews for a doctor ---
+export async function getDoctorReviews(doctorId: string): Promise<DoctorReviews> {
+  const res = await fetch(`${API_URL}/api/doctors/reviews?doctor_id=${doctorId}`)
   return jsonOrThrow(res)
 }
 
