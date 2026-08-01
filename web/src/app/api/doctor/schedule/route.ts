@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBearerDoctor } from '@/lib/doctor-auth'
+import { requireSubscribedDoctor } from '@/lib/doctor-auth'
 
 // GET  /api/doctor/schedule — weekly availability + upcoming time-off days
 // POST /api/doctor/schedule — update one weekday:
@@ -10,8 +10,12 @@ import { getBearerDoctor } from '@/lib/doctor-auth'
 export async function GET(request: Request) {
   try {
     const admin = createAdminClient()
-    const doctor = await getBearerDoctor(request, admin)
-    if (!doctor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { doctor, access } = await requireSubscribedDoctor(request, admin)
+    if (!doctor) {
+      return access
+        ? NextResponse.json({ error: 'Subscription required', subscription_required: true }, { status: 402 })
+        : NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const today = new Date().toISOString().slice(0, 10)
     const [{ data: availability }, { data: timeOff }] = await Promise.all([
@@ -38,8 +42,12 @@ const HHMM = /^\d{2}:\d{2}$/
 export async function POST(request: Request) {
   try {
     const admin = createAdminClient()
-    const doctor = await getBearerDoctor(request, admin)
-    if (!doctor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { doctor, access } = await requireSubscribedDoctor(request, admin)
+    if (!doctor) {
+      return access
+        ? NextResponse.json({ error: 'Subscription required', subscription_required: true }, { status: 402 })
+        : NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body = await request.json().catch(() => ({}))
     const weekday = Number(body.weekday)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBearerDoctor } from '@/lib/doctor-auth'
+import { requireSubscribedDoctor } from '@/lib/doctor-auth'
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -12,8 +12,12 @@ function ymd(d: Date): string {
 export async function GET(request: Request) {
   try {
     const admin = createAdminClient()
-    const doctor = await getBearerDoctor(request, admin)
-    if (!doctor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { doctor, access } = await requireSubscribedDoctor(request, admin)
+    if (!doctor) {
+      return access
+        ? NextResponse.json({ error: 'Subscription required', subscription_required: true }, { status: 402 })
+        : NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const today = new Date()
     const start = ymd(today)

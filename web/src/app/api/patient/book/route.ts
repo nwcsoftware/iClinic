@@ -29,10 +29,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No patient profile. Complete your profile first.', needs_profile: true }, { status: 400 })
     }
 
-    // Doctor must be an active doctor.
+    // public_doctors already filters to active doctors with a live subscription,
+    // so a lapsed doctor cannot receive new bookings.
     const { data: doctor } = await admin
-      .from('profiles').select('id, role, is_active').eq('id', doctor_id).maybeSingle()
-    if (!doctor || doctor.role !== 'doctor' || !doctor.is_active) {
+      .from('public_doctors').select('id').eq('id', doctor_id).maybeSingle()
+    if (!doctor) {
       return NextResponse.json({ error: 'Doctor not available' }, { status: 400 })
     }
 

@@ -21,11 +21,12 @@ import DoctorHomeScreen from './screens/doctor/DoctorHomeScreen'
 import DoctorScheduleScreen from './screens/doctor/DoctorScheduleScreen'
 import DoctorPatientsScreen from './screens/doctor/DoctorPatientsScreen'
 import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
+import PaywallScreen from './screens/doctor/PaywallScreen'
 
 type PatientTab = 'home' | 'doctors' | 'visits' | 'profile'
 type DoctorTab = 'dhome' | 'schedule' | 'patients' | 'dprofile'
 type Overlay = { kind: 'triage' } | { kind: 'booking'; doctor: Doctor; reason: string } | null
-type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor'
+type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor' | 'paywall'
 
 const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { key: 'home', icon: 'home', label: 'tab.home' },
@@ -83,8 +84,11 @@ function Main() {
   // Doctors land on the doctor shell; everyone else on the patient flow.
   const resolveAfterAuth = useCallback(async (): Promise<Phase> => {
     try {
-      const doc = await getDoctorMe()
-      if (doc) { setDoctorMe(doc); return 'doctor' }
+      const { doctor, access } = await getDoctorMe()
+      if (doctor) {
+        setDoctorMe(doctor)
+        return access && !access.has_access ? 'paywall' : 'doctor'
+      }
     } catch { /* fall through to patient flow */ }
     try {
       const { patient: p, needs_profile } = await initPatient()
@@ -144,6 +148,17 @@ function Main() {
   }
   if (phase === 'setup') {
     return <ProfileSetupScreen onDone={async () => { setPhase(await resolveAfterAuth()) }} />
+  }
+
+  // ── Locked out until they pay: no tabs, nothing reachable ─────────────────
+  if (phase === 'paywall' && doctorMe) {
+    return (
+      <PaywallScreen
+        doctor={doctorMe}
+        onRetry={async () => { setPhase(await resolveAfterAuth()) }}
+        onSignedOut={() => setPhase('auth')}
+      />
+    )
   }
 
   // ── Doctor shell ──────────────────────────────────────────────────────────

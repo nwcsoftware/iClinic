@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBearerDoctor } from '@/lib/doctor-auth'
+import { requireSubscribedDoctor } from '@/lib/doctor-auth'
 
 // POST /api/doctor/time-off  { date: "YYYY-MM-DD" }
 // Toggles a specific day off/on: if the date is already blocked it becomes
@@ -8,8 +8,12 @@ import { getBearerDoctor } from '@/lib/doctor-auth'
 export async function POST(request: Request) {
   try {
     const admin = createAdminClient()
-    const doctor = await getBearerDoctor(request, admin)
-    if (!doctor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { doctor, access } = await requireSubscribedDoctor(request, admin)
+    if (!doctor) {
+      return access
+        ? NextResponse.json({ error: 'Subscription required', subscription_required: true }, { status: 402 })
+        : NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body = await request.json().catch(() => ({}))
     const date = typeof body.date === 'string' ? body.date : ''

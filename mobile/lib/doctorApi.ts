@@ -10,6 +10,37 @@ export type DoctorMe = {
   review_count: number | null
 }
 
+export type Access = {
+  has_access: boolean
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'none'
+  days_left: number
+  is_trial: boolean
+  in_grace: boolean
+  current_period_end: string | null
+  price_usd: number
+  billing_enabled: boolean
+}
+
+export type SubscriptionInfo = {
+  access: Access
+  payments: {
+    amount_usd: number
+    currency: string
+    method: string
+    reference: string | null
+    period_end: string | null
+    created_at: string
+  }[]
+  instructions: {
+    whish: string | null
+    omt: string | null
+    bank: string | null
+    contact: string | null
+    note: string
+  }
+  checkout_url: string | null
+}
+
 export type DoctorOverview = {
   today: { id: string; start_time: string; status: string; reason: string | null; patient_name: string }[]
   days: { date: string; count: number }[]
@@ -51,10 +82,16 @@ async function jsonOrThrow(res: Response) {
 }
 
 // Null when the logged-in user is not a doctor — the app uses this to route.
-export async function getDoctorMe(): Promise<DoctorMe | null> {
+// `access` decides between the doctor app and the paywall.
+export async function getDoctorMe(): Promise<{ doctor: DoctorMe | null; access: Access | null }> {
   const res = await fetch(`${API_URL}/api/doctor/me`, { headers: await authHeader() })
   const body = await jsonOrThrow(res)
-  return body.doctor ?? null
+  return { doctor: body.doctor ?? null, access: body.access ?? null }
+}
+
+export async function getSubscription(): Promise<SubscriptionInfo> {
+  const res = await fetch(`${API_URL}/api/doctor/subscription`, { headers: await authHeader() })
+  return jsonOrThrow(res)
 }
 
 export async function getDoctorOverview(): Promise<DoctorOverview> {
