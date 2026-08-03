@@ -22,6 +22,7 @@ import DoctorScheduleScreen from './screens/doctor/DoctorScheduleScreen'
 import DoctorPatientsScreen from './screens/doctor/DoctorPatientsScreen'
 import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
 import PaywallScreen from './screens/doctor/PaywallScreen'
+import EmergencyButton from './components/EmergencyButton'
 
 type PatientTab = 'home' | 'doctors' | 'visits' | 'profile'
 type DoctorTab = 'dhome' | 'schedule' | 'patients' | 'dprofile'
@@ -179,20 +180,26 @@ function Main() {
   // ── Patient shell ─────────────────────────────────────────────────────────
   if (overlay?.kind === 'triage') {
     return (
-      <TriageScreen
-        onBack={() => setOverlay(null)}
-        onPickDoctor={(doctor, summary) => setOverlay({ kind: 'booking', doctor, reason: summary })}
-      />
+      <View style={{ flex: 1 }}>
+        <TriageScreen
+          onBack={() => setOverlay(null)}
+          onPickDoctor={(doctor, summary) => setOverlay({ kind: 'booking', doctor, reason: summary })}
+        />
+        <EmergencyButton />
+      </View>
     )
   }
   if (overlay?.kind === 'booking') {
     return (
-      <BookingScreen
-        doctor={overlay.doctor}
-        reason={overlay.reason}
-        onBack={() => setOverlay(null)}
-        onDone={() => { setOverlay(null); setPTab('visits') }}
-      />
+      <View style={{ flex: 1 }}>
+        <BookingScreen
+          doctor={overlay.doctor}
+          reason={overlay.reason}
+          onBack={() => setOverlay(null)}
+          onDone={() => { setOverlay(null); setPTab('visits') }}
+        />
+        <EmergencyButton />
+      </View>
     )
   }
 
@@ -220,6 +227,7 @@ function Main() {
           />
         )}
       </View>
+      <EmergencyButton />
       <TabBar tabs={PATIENT_TABS} tab={pTab} onTab={setPTab} accent={colors.brand} accentSoft={colors.brandSoft} />
     </View>
   )

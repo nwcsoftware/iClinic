@@ -12,6 +12,7 @@ import { colors, radius, shadow, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
 import { Avatar, Rating, TopBar } from '../components/ui'
 import { FadeInUp } from '../components/motion'
+import { getCountry, loadSavedCountry, dial } from '../lib/emergency'
 
 type Bubble = ChatMessage & { id: number }
 
@@ -58,9 +59,12 @@ export default function TriageScreen({
   const [summary, setSummary] = useState('')
   const [emergency, setEmergency] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [countryCode, setCountryCode] = useState('LB')
   const scrollRef = useRef<ScrollView>(null)
   const history = useRef<ChatMessage[]>([])
   const sessionId = useRef<string | null>(null)
+
+  useEffect(() => { loadSavedCountry().then(setCountryCode) }, [])
 
   function scrollDown(animated = true) {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated }), 60)
@@ -190,10 +194,21 @@ export default function TriageScreen({
             {emergency && (
               <FadeInUp>
                 <View style={styles.emergency}>
-                  <Feather name="alert-triangle" size={16} color={colors.danger} style={{ marginTop: 1 }} />
-                  <Text style={styles.emergencyText}>
-                    {t('chat.emergency')}
-                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Feather name="alert-triangle" size={16} color={colors.danger} style={{ marginTop: 1 }} />
+                    <Text style={styles.emergencyText}>
+                      {t('chat.emergency')}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => dial(getCountry(countryCode).services[0].number)}
+                    style={({ pressed }) => [styles.emergencyCallBtn, pressed && { backgroundColor: '#B91C1C' }]}
+                  >
+                    <Feather name="phone" size={15} color="#fff" />
+                    <Text style={styles.emergencyCallText}>
+                      {t('emergency.callNow', { number: getCountry(countryCode).services[0].number })}
+                    </Text>
+                  </Pressable>
                 </View>
               </FadeInUp>
             )}
@@ -265,10 +280,15 @@ const styles = StyleSheet.create({
   },
   suggestionText: { fontSize: 13.5, color: colors.text, fontWeight: '600' },
   emergency: {
-    flexDirection: 'row', gap: 10, backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: '#F6C9C9',
+    backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: '#F6C9C9',
     borderRadius: radius.md, padding: 13, marginTop: 6, marginBottom: 8,
   },
   emergencyText: { flex: 1, color: colors.danger, fontSize: 13, fontWeight: '600', lineHeight: 19 },
+  emergencyCallBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.danger, borderRadius: radius.sm, paddingVertical: 10, marginTop: 10,
+  },
+  emergencyCallText: { color: '#fff', fontWeight: '800', fontSize: 13.5 },
   docCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: radius.lg,

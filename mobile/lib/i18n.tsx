@@ -64,6 +64,13 @@ const STRINGS = {
     'common.book': 'Book',
     'common.specialist': 'Specialist',
 
+    'emergency.title': 'Emergency',
+    'emergency.sub': "If you're in danger, call for help now.",
+    'emergency.callNow': 'Call {number} now',
+    'emergency.country': 'Country: {country}',
+    'emergency.pickCountry': 'Choose your country',
+    'emergency.disclaimer': "This lists local emergency services, not iClinic staff. In a life-threatening situation, call immediately or go to the nearest emergency department.",
+
     'chat.title': 'Health assistant',
     'chat.greeting': "Hi, I'm your health assistant 👋 Tell me what's bothering you — your symptoms and how long you've had them — and I'll point you to the right specialty. I don't give medical advice or diagnoses.",
     'chat.common': 'Common concerns',
@@ -186,6 +193,13 @@ const STRINGS = {
     'common.book': 'Réserver',
     'common.specialist': 'Spécialiste',
 
+    'emergency.title': 'Urgence',
+    'emergency.sub': "Si vous êtes en danger, appelez à l'aide maintenant.",
+    'emergency.callNow': 'Appeler le {number}',
+    'emergency.country': 'Pays : {country}',
+    'emergency.pickCountry': 'Choisissez votre pays',
+    'emergency.disclaimer': "Cette liste indique les services d'urgence locaux, pas le personnel d'iClinic. En cas de danger vital, appelez immédiatement ou rendez-vous aux urgences les plus proches.",
+
     'chat.title': 'Assistant santé',
     'chat.greeting': "Bonjour, je suis votre assistant santé 👋 Dites-moi ce qui vous gêne — vos symptômes et depuis quand — et je vous orienterai vers la bonne spécialité. Je ne donne ni conseils médicaux ni diagnostics.",
     'chat.common': 'Motifs fréquents',
@@ -307,6 +321,13 @@ const STRINGS = {
     'doctors.noneSub': 'جرّب بحثاً أو تصفية أخرى.',
     'common.book': 'احجز',
     'common.specialist': 'اختصاصي',
+
+    'emergency.title': 'طوارئ',
+    'emergency.sub': 'إذا كنت في خطر، اتصل للحصول على المساعدة الآن.',
+    'emergency.callNow': 'اتصل بالرقم {number} الآن',
+    'emergency.country': 'الدولة: {country}',
+    'emergency.pickCountry': 'اختر دولتك',
+    'emergency.disclaimer': 'هذه أرقام خدمات الطوارئ المحلية، وليست فريق iClinic. في حال وجود خطر على الحياة، اتصل فوراً أو توجّه إلى أقرب قسم طوارئ.',
 
     'chat.title': 'المساعد الصحي',
     'chat.greeting': 'مرحباً، أنا مساعدك الصحي 👋 أخبرني بما يزعجك — الأعراض ومنذ متى — وسأرشدك إلى التخصص المناسب. لا أقدّم نصائح طبية أو تشخيصاً.',
