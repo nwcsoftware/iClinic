@@ -9,10 +9,11 @@ import { DoctorAmbient, FadeInUp } from '../../components/motion'
 import { getSubscription, type DoctorMe, type Access } from '../../lib/doctorApi'
 
 export default function DoctorProfileScreen({
-  doctor, onSignedOut,
+  doctor, onSignedOut, onOpenBilling,
 }: {
   doctor: DoctorMe
   onSignedOut: () => void
+  onOpenBilling: () => void
 }) {
   const insets = useSafeAreaInsets()
   const [access, setAccess] = useState<Access | null>(null)
@@ -43,7 +44,7 @@ export default function DoctorProfileScreen({
 
         {access?.billing_enabled ? (
           <FadeInUp delay={70}>
-            <Card style={{ marginBottom: 16 }}>
+            <Card style={{ marginBottom: 16 }} onPress={onOpenBilling}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={styles.subIcon}>
                   <Feather name={access.is_trial ? 'gift' : 'check-circle'} size={16} color={colors.doc} />
@@ -59,6 +60,7 @@ export default function DoctorProfileScreen({
                   </Text>
                 </View>
                 <Text style={styles.subPrice}>${access.price_usd.toFixed(2)}/mo</Text>
+                <Feather name="chevron-right" size={18} color={colors.textFaint} />
               </View>
               {access.is_trial && access.days_left <= 5 ? (
                 <Text style={[type.sub, { marginTop: 12, color: colors.amber }]}>
@@ -68,6 +70,23 @@ export default function DoctorProfileScreen({
             </Card>
           </FadeInUp>
         ) : null}
+
+        <FadeInUp delay={80}>
+          <Card style={{ marginBottom: 16 }} onPress={onOpenBilling}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={styles.subIcon}>
+                <Feather name="credit-card" size={16} color={colors.doc} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={type.h2}>Billing and payments</Text>
+                <Text style={[type.sub, { marginTop: 2 }]}>
+                  Payment method, invoices and history
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.textFaint} />
+            </View>
+          </Card>
+        </FadeInUp>
 
         <FadeInUp delay={90}>
           <Card>

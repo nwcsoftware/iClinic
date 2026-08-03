@@ -21,12 +21,14 @@ import DoctorHomeScreen from './screens/doctor/DoctorHomeScreen'
 import DoctorScheduleScreen from './screens/doctor/DoctorScheduleScreen'
 import DoctorPatientsScreen from './screens/doctor/DoctorPatientsScreen'
 import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
+import DoctorBillingScreen from './screens/doctor/DoctorBillingScreen'
 import PaywallScreen from './screens/doctor/PaywallScreen'
 import EmergencyButton from './components/EmergencyButton'
 
 type PatientTab = 'home' | 'doctors' | 'visits' | 'profile'
 type DoctorTab = 'dhome' | 'schedule' | 'patients' | 'dprofile'
 type Overlay = { kind: 'triage' } | { kind: 'booking'; doctor: Doctor; reason: string } | null
+type DoctorOverlay = { kind: 'billing' } | null
 type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor' | 'paywall'
 
 const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
@@ -77,6 +79,7 @@ function Main() {
   const [pTab, setPTab] = useState<PatientTab>('home')
   const [dTab, setDTab] = useState<DoctorTab>('dhome')
   const [overlay, setOverlay] = useState<Overlay>(null)
+  const [docOverlay, setDocOverlay] = useState<DoctorOverlay>(null)
   const [patient, setPatient] = useState<PatientInfo | null>(null)
   const [doctorMe, setDoctorMe] = useState<DoctorMe | null>(null)
   const splashDone = useRef(false)
@@ -164,13 +167,24 @@ function Main() {
 
   // ── Doctor shell ──────────────────────────────────────────────────────────
   if (phase === 'doctor' && doctorMe) {
+    // Billing takes over the screen: a doctor changing their plan should not be
+    // half-looking at their schedule behind it.
+    if (docOverlay?.kind === 'billing') {
+      return <DoctorBillingScreen onBack={() => setDocOverlay(null)} />
+    }
     return (
       <View style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
           {dTab === 'dhome' && <DoctorHomeScreen doctor={doctorMe} />}
           {dTab === 'schedule' && <DoctorScheduleScreen />}
           {dTab === 'patients' && <DoctorPatientsScreen />}
-          {dTab === 'dprofile' && <DoctorProfileScreen doctor={doctorMe} onSignedOut={() => setPhase('auth')} />}
+          {dTab === 'dprofile' && (
+            <DoctorProfileScreen
+              doctor={doctorMe}
+              onSignedOut={() => setPhase('auth')}
+              onOpenBilling={() => setDocOverlay({ kind: 'billing' })}
+            />
+          )}
         </View>
         <TabBar tabs={DOCTOR_TABS} tab={dTab} onTab={setDTab} accent={colors.doc} accentSoft={colors.docSoft} />
       </View>

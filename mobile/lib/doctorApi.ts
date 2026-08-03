@@ -41,6 +41,64 @@ export type SubscriptionInfo = {
   checkout_url: string | null
 }
 
+export type SavedCard = {
+  brand: string | null
+  last4: string
+  exp_month: number | null
+  exp_year: number | null
+}
+
+export type Payment = {
+  id?: string
+  amount_usd: number
+  currency: string
+  method: string
+  reference: string | null
+  period_end: string | null
+  created_at: string
+  status?: 'paid' | 'failed' | 'refunded' | 'pending'
+  description?: string | null
+  invoice_url?: string | null
+  receipt_url?: string | null
+  card_brand?: string | null
+  card_last4?: string | null
+  failure_reason?: string | null
+}
+
+export type BillingInfo = {
+  access: Access
+  subscription: {
+    status: Access['status']
+    plan: 'monthly' | 'yearly'
+    price_usd: number
+    provider: string
+    current_period_start: string | null
+    current_period_end: string | null
+    trial_end: string | null
+    cancel_at_period_end: boolean
+    billing_email: string | null
+    last_payment_at: string | null
+    last_payment_status: string | null
+  } | null
+  card: SavedCard | null
+  next_charge: { amount_usd: number; date: string } | null
+  payments: Payment[]
+  capabilities: {
+    provider: string
+    can_pay_by_card: boolean
+    can_self_serve: boolean
+    cancel_via_provider: boolean
+  }
+  instructions: {
+    whish: string | null
+    omt: string | null
+    bank: string | null
+    contact: string | null
+    note: string
+  }
+  details_enabled: boolean
+}
+
 export type DoctorOverview = {
   today: { id: string; start_time: string; status: string; reason: string | null; patient_name: string }[]
   days: { date: string; count: number }[]
@@ -91,6 +149,23 @@ export async function getDoctorMe(): Promise<{ doctor: DoctorMe | null; access: 
 
 export async function getSubscription(): Promise<SubscriptionInfo> {
   const res = await fetch(`${API_URL}/api/doctor/subscription`, { headers: await authHeader() })
+  return jsonOrThrow(res)
+}
+
+export async function getBilling(): Promise<BillingInfo> {
+  const res = await fetch(`${API_URL}/api/doctor/billing`, { headers: await authHeader() })
+  return jsonOrThrow(res)
+}
+
+// checkout / portal return a URL to open; cancel / resume toggle auto-renew.
+export async function billingAction(
+  action: 'checkout' | 'portal' | 'cancel' | 'resume',
+): Promise<{ url?: string | null }> {
+  const res = await fetch(`${API_URL}/api/doctor/billing`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ action }),
+  })
   return jsonOrThrow(res)
 }
 
