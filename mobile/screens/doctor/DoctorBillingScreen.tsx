@@ -75,6 +75,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
   const [busy, setBusy] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [error, setError] = useState('')
+  const [plan, setPlan] = useState('m1')
 
   const load = useCallback(async () => {
     try { setInfo(await getBilling()); setError('') }
@@ -88,7 +89,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
     setBusy(action)
     setError('')
     try {
-      const res = await billingAction(action)
+      const res = await billingAction(action, action === 'checkout' ? plan : undefined)
       if ((action === 'checkout' || action === 'portal')) {
         if (res.url) Linking.openURL(res.url)
         else setError('Card payment is not set up yet — use the transfer details below.')
@@ -224,20 +225,59 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
         {/* ── Actions ──────────────────────────────────────────────────────── */}
         <FadeInUp delay={110}>
           {cap?.can_pay_by_card ? (
-            <Pressable
-              onPress={() => run('checkout')}
-              disabled={busy === 'checkout'}
-              style={({ pressed }) => [styles.payBtn, pressed && { backgroundColor: colors.docDark }]}
-            >
-              {busy === 'checkout' ? <ActivityIndicator color="#fff" /> : (
-                <>
-                  <Feather name="credit-card" size={18} color="#fff" />
-                  <Text style={styles.payBtnText}>
-                    {info?.card ? 'Pay now' : 'Pay by card'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
+            <>
+              {info?.plans?.length ? (
+                <View style={{ marginTop: 20 }}>
+                  <Text style={[type.label, { marginBottom: 10 }]}>Choose how long to pay for</Text>
+                  {info.plans.map((p) => {
+                    const active = p.key === plan
+                    return (
+                      <Pressable key={p.key} onPress={() => setPlan(p.key)}
+                        style={[styles.planRow, active && styles.planRowActive]}>
+                        <View style={[styles.radio, active && styles.radioOn]}>
+                          {active ? <View style={styles.radioDot} /> : null}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={type.h2}>{p.label}</Text>
+                          <Text style={[type.sub, { marginTop: 1 }]}>
+                            {money(p.amount_usd / p.months)} per month
+                          </Text>
+                        </View>
+                        {p.save_pct > 0 ? (
+                          <View style={styles.saveBadge}>
+                            <Text style={styles.saveText}>Save {p.save_pct}%</Text>
+                          </View>
+                        ) : null}
+                        <Text style={styles.planAmount}>{money(p.amount_usd)}</Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
+              ) : null}
+
+              {cap.test_mode ? (
+                <View style={styles.testBox}>
+                  <Feather name="alert-triangle" size={14} color={colors.amber} />
+                  <Text style={styles.testText}>Test mode — no real money will be charged.</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={() => run('checkout')}
+                disabled={busy === 'checkout'}
+                style={({ pressed }) => [styles.payBtn, pressed && { backgroundColor: colors.docDark }]}
+              >
+                {busy === 'checkout' ? <ActivityIndicator color="#fff" /> : (
+                  <>
+                    <Feather name="credit-card" size={18} color="#fff" />
+                    <Text style={styles.payBtnText}>Pay by card</Text>
+                  </>
+                )}
+              </Pressable>
+              <Text style={styles.cardNote}>
+                Works with any Visa or Mastercard, including the free virtual Visa card in the Whish app.
+              </Text>
+            </>
           ) : null}
 
           {sub ? (
@@ -364,6 +404,27 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   linkText: { color: colors.doc, fontWeight: '800', fontSize: 13.5 },
+  planRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card,
+    borderRadius: radius.md, padding: 14, marginBottom: 9,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  planRowActive: { borderColor: colors.doc, backgroundColor: colors.docSofter },
+  radio: {
+    width: 21, height: 21, borderRadius: 11, borderWidth: 2, borderColor: colors.borderStrong,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  radioOn: { borderColor: colors.doc },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.doc },
+  planAmount: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  saveBadge: { backgroundColor: colors.successBg, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
+  saveText: { color: '#0E7E58', fontSize: 10.5, fontWeight: '800' },
+  testBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 2,
+    backgroundColor: colors.amberBg, borderRadius: radius.sm, padding: 10,
+  },
+  testText: { flex: 1, color: colors.amber, fontSize: 12.5, fontWeight: '700' },
+  cardNote: { ...type.small, textAlign: 'center', marginTop: 10, lineHeight: 17 },
   payBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
     backgroundColor: colors.doc, borderRadius: radius.md, paddingVertical: 15, marginTop: 16, minHeight: 52,

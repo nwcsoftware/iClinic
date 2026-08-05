@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBearerDoctor, getAccess } from '@/lib/doctor-auth'
-import { getBillingProvider } from '@/lib/billing'
+import { getBillingProvider, PLANS, getPlan } from '@/lib/billing'
+import { areebaConfigured, areebaIsTestMerchant } from '@/lib/areeba'
+import { startCardCheckout } from '@/lib/billing-checkout'
 
 // Columns added by migration 0006. Selected separately so the page keeps
 // working before that migration is applied.
@@ -100,7 +102,14 @@ export async function GET(request: Request) {
       card,
       next_charge,
       payments,
-      capabilities: provider.capabilities(),
+      capabilities: {
+        ...provider.capabilities(),
+        // Areeba is its own rail: cards via MPGS, verified server-side.
+        can_pay_by_card: areebaConfigured() || provider.capabilities().can_pay_by_card,
+        card_provider: areebaConfigured() ? 'areeba' : null,
+        test_mode: areebaConfigured() ? areebaIsTestMerchant() : false,
+      },
+      plans: Object.values(PLANS),
       instructions: {
         whish: process.env.PAY_WHISH_NUMBER ?? null,
         omt: process.env.PAY_OMT_NAME ?? null,
@@ -141,23 +150,46 @@ export async function POST(request: Request) {
 
     const provider = getBillingProvider()
 
-    if (action === 'checkout' || action === 'portal') {
+    if (action === 'checkout') {
+      // Areeba takes priority when configured: it is the real card rail.
+      if (areebaConfigured()) {
+        // The plan key is the only thing the client chooses. The price comes
+        // from the server table, so a tampered request cannot buy a year for $1.
+        const plan = getPlan(body.plan ?? 'm1')
+        if (!plan) {
+          return NextResponse.json(
+            { error: `plan must be one of: ${Object.keys(PLANS).join(', ')}` }, { status: 400 },
+          )
+        }
+        const origin = process.env.PUBLIC_WEB_URL ?? new URL(request.url).origin
+        const { payUrl, orderId } = await startCardCheckout(admin, doctor.id, plan, origin)
+        return NextResponse.json({ url: payUrl, order_id: orderId })
+      }
+
       const { data: sub } = await admin
         .from('doctor_subscriptions')
-        .select('provider_customer_id, billing_email')
+        .select('billing_email')
         .eq('doctor_id', doctor.id)
         .maybeSingle()
 
-      const url = action === 'checkout'
-        ? await provider.createCheckoutUrl({
-            doctorId: doctor.id,
-            email: (sub?.billing_email as string) ?? null,
-          })
-        : await provider.createPortalUrl({
-            doctorId: doctor.id,
-            customerId: (sub?.provider_customer_id as string) ?? null,
-          })
+      const url = await provider.createCheckoutUrl({
+        doctorId: doctor.id,
+        email: (sub?.billing_email as string) ?? null,
+      })
+      return NextResponse.json({ url })
+    }
 
+    if (action === 'portal') {
+      const { data: sub } = await admin
+        .from('doctor_subscriptions')
+        .select('provider_customer_id')
+        .eq('doctor_id', doctor.id)
+        .maybeSingle()
+
+      const url = await provider.createPortalUrl({
+        doctorId: doctor.id,
+        customerId: (sub?.provider_customer_id as string) ?? null,
+      })
       return NextResponse.json({ url })
     }
 

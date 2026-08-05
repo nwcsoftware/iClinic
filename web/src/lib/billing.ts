@@ -10,6 +10,35 @@
 // We never see or store a card number. Providers return brand/last4/expiry only.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Prices live here and ONLY here. The client sends a plan key, never an amount
+// — otherwise anyone could post {"months":12,"amount":0.01} and buy a year.
+// Longer blocks are the norm in Lebanon: fewer payment events means fewer
+// failures, so the discount is deliberate.
+// ---------------------------------------------------------------------------
+export type PlanKey = 'm1' | 'm3' | 'm12'
+
+export type Plan = {
+  key: PlanKey
+  months: number
+  amount_usd: number
+  label: string
+  /** Percent saved against paying monthly, for the UI badge. */
+  save_pct: number
+}
+
+const MONTHLY = 9.99
+
+export const PLANS: Record<PlanKey, Plan> = {
+  m1: { key: 'm1', months: 1, amount_usd: 9.99, label: '1 month', save_pct: 0 },
+  m3: { key: 'm3', months: 3, amount_usd: 26.99, label: '3 months', save_pct: Math.round((1 - 26.99 / (MONTHLY * 3)) * 100) },
+  m12: { key: 'm12', months: 12, amount_usd: 95.99, label: '12 months', save_pct: Math.round((1 - 95.99 / (MONTHLY * 12)) * 100) },
+}
+
+export function getPlan(key: unknown): Plan | null {
+  return typeof key === 'string' && key in PLANS ? PLANS[key as PlanKey] : null
+}
+
 export type BillingCapabilities = {
   provider: string
   // A hosted page exists where the doctor can pay by card.

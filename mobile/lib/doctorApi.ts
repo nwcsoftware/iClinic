@@ -88,7 +88,10 @@ export type BillingInfo = {
     can_pay_by_card: boolean
     can_self_serve: boolean
     cancel_via_provider: boolean
+    card_provider?: string | null
+    test_mode?: boolean
   }
+  plans?: { key: string; months: number; amount_usd: number; label: string; save_pct: number }[]
   instructions: {
     whish: string | null
     omt: string | null
@@ -160,11 +163,12 @@ export async function getBilling(): Promise<BillingInfo> {
 // checkout / portal return a URL to open; cancel / resume toggle auto-renew.
 export async function billingAction(
   action: 'checkout' | 'portal' | 'cancel' | 'resume',
-): Promise<{ url?: string | null }> {
+  plan?: string,
+): Promise<{ url?: string | null; order_id?: string }> {
   const res = await fetch(`${API_URL}/api/doctor/billing`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify(plan ? { action, plan } : { action }),
   })
   return jsonOrThrow(res)
 }
