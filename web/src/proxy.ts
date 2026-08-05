@@ -27,7 +27,12 @@ export async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user ?? null
 
-  const publicRoutes = ['/', '/login', '/register']
+  // /pay is the card checkout and its return URL. It must stay public: the
+  // doctor opens it from the mobile app and Areeba redirects the browser back
+  // to it, and neither carries a staff session cookie. It is safe because the
+  // order id is unguessable and the pages expose only an amount — activation
+  // is decided by asking the gateway server-side, never by who is browsing.
+  const publicRoutes = ['/', '/login', '/register', '/pay']
   const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'))
 
   if (!user && !isPublic) {
