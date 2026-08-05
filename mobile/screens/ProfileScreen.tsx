@@ -11,12 +11,29 @@ import { useI18n, LANGUAGES, type Lang } from '../lib/i18n'
 import { Avatar, Card, PrimaryButton } from '../components/ui'
 import { notify } from '../lib/notify'
 
+// One line telling the patient what they have on file, so the row is useful
+// without opening it.
+function summariseMedical(
+  p: PatientInfo | null,
+  t: (k: never) => string,
+): string {
+  const a = p?.allergies?.length ?? 0
+  const c = p?.chronic_conditions?.length ?? 0
+  if (a === 0 && c === 0) return t('medical.promptSub' as never)
+  const parts: string[] = []
+  if (a > 0) parts.push(`${a} ${t('medical.allergies' as never).toLowerCase()}`)
+  if (c > 0) parts.push(`${c} ${t('medical.conditions' as never).toLowerCase()}`)
+  return parts.join(' · ')
+}
+
 export default function ProfileScreen({
-  patient: initial, onSignedOut, onPatientUpdated,
+  patient: initial, onSignedOut, onPatientUpdated, onOpenMedical, onOpenGuide,
 }: {
   patient: PatientInfo | null
   onSignedOut: () => void
   onPatientUpdated: (p: PatientInfo) => void
+  onOpenMedical: () => void
+  onOpenGuide: () => void
 }) {
   const insets = useSafeAreaInsets()
   const { t, lang, setLang, isRTL } = useI18n()
@@ -63,6 +80,36 @@ export default function ProfileScreen({
         <Text style={[type.h1, { marginTop: 14 }]}>{patient?.full_name ?? '—'}</Text>
         {patient?.email ? <Text style={[type.sub, { marginTop: 4 }]}>{patient.email}</Text> : null}
       </View>
+
+      {/* Medical information — the doctor reads this before treating them. */}
+      <Card style={{ marginBottom: 16 }} onPress={onOpenMedical}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+          <View style={styles.rowIcon}>
+            <Feather name="heart" size={16} color={colors.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={type.h2}>{t('medical.title')}</Text>
+            <Text style={[type.sub, { marginTop: 2 }]}>
+              {summariseMedical(patient, t)}
+            </Text>
+          </View>
+          <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.textFaint} />
+        </View>
+      </Card>
+
+      {/* Re-open the walkthrough at any time */}
+      <Card style={{ marginBottom: 16 }} onPress={onOpenGuide}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+          <View style={styles.rowIcon}>
+            <Feather name="help-circle" size={16} color={colors.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={type.h2}>{t('guide.howItWorks')}</Text>
+            <Text style={[type.sub, { marginTop: 2 }]}>{t('guide.replay')}</Text>
+          </View>
+          <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.textFaint} />
+        </View>
+      </Card>
 
       {/* Language */}
       <Card style={{ marginBottom: 16 }}>
@@ -170,6 +217,10 @@ const styles = StyleSheet.create({
   },
   langNative: { fontSize: 15.5, fontWeight: '700', color: colors.ink, minWidth: 82 },
   langLabel: { flex: 1, fontSize: 13, color: colors.textMuted },
+  rowIcon: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
   signOut: {
     marginTop: 20, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center',
     borderWidth: 1.5, borderColor: '#F3D2D2', backgroundColor: colors.card,

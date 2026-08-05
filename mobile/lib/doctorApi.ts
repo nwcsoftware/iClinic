@@ -130,6 +130,59 @@ export type Availability = {
 
 export type TimeOff = { id: string; off_date: string; reason: string | null }
 
+export type RxItem = {
+  id?: string
+  medication_name: string
+  dosage: string | null
+  frequency: string | null
+  times_of_day: string[] | null
+  duration: string | null
+  route: string | null
+  notes: string | null
+  starts_on?: string | null
+  ends_on?: string | null
+}
+
+export type DoctorVisit = {
+  id: string
+  patient_id: string
+  patient_name: string
+  patient_mobile: string | null
+  appointment_date: string
+  start_time: string
+  status: string
+  reason: string | null
+  is_past: boolean
+  prescription_id: string | null
+}
+
+export type PatientDetail = {
+  patient: {
+    id: string
+    full_name: string
+    mobile_number: string
+    email: string | null
+    date_of_birth: string | null
+    gender: string | null
+    address: string | null
+    allergies?: string[] | null
+    chronic_conditions?: string[] | null
+    blood_type?: string | null
+    medical_notes?: string | null
+  }
+  medical_enabled: boolean
+  visits: {
+    id: string; appointment_date: string; start_time: string; status: string
+    reason: string | null; notes: string | null; is_past: boolean
+  }[]
+  stats: { total_visits: number; first_visit: string | null; last_visit: string | null }
+  prescriptions: {
+    id: string; created_at: string; appointment_id: string | null
+    diagnosis_note: string | null; notes: string | null
+    mine: boolean; active: boolean; items: RxItem[]
+  }[]
+}
+
 async function authHeader(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
@@ -182,6 +235,40 @@ export async function getDoctorPatients(): Promise<DoctorPatient[]> {
   const res = await fetch(`${API_URL}/api/doctor/patients`, { headers: await authHeader() })
   const body = await jsonOrThrow(res)
   return body.patients ?? []
+}
+
+export async function getPatientDetail(id: string): Promise<PatientDetail> {
+  const res = await fetch(`${API_URL}/api/doctor/patients/${id}`, { headers: await authHeader() })
+  return jsonOrThrow(res)
+}
+
+export async function getDoctorVisits(scope: 'past' | 'upcoming' = 'past'): Promise<DoctorVisit[]> {
+  const res = await fetch(`${API_URL}/api/doctor/visits?scope=${scope}`, { headers: await authHeader() })
+  const body = await jsonOrThrow(res)
+  return body.visits ?? []
+}
+
+// Re-submitting for the same visit replaces that prescription.
+export async function savePrescription(input: {
+  appointment_id: string
+  diagnosis_note?: string
+  notes?: string
+  items: {
+    medication_name: string
+    dosage?: string
+    frequency?: string
+    times_of_day?: string[]
+    duration_days?: number
+    route?: string
+    notes?: string
+  }[]
+}) {
+  const res = await fetch(`${API_URL}/api/doctor/prescriptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
+  })
+  return jsonOrThrow(res)
 }
 
 export async function getDoctorSchedule(): Promise<{ availability: Availability[]; time_off: TimeOff[] }> {

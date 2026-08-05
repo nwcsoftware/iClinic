@@ -69,6 +69,39 @@ export type PatientInfo = {
   email: string | null
   date_of_birth: string | null
   gender: string | null
+  // Medical profile (migration 0008). Absent until that migration runs.
+  allergies?: string[] | null
+  chronic_conditions?: string[] | null
+  blood_type?: string | null
+  medical_notes?: string | null
+  medical_reviewed_at?: string | null
+}
+
+export const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const
+
+export type Medication = {
+  id: string
+  medication_name: string
+  dosage: string | null
+  frequency: string | null
+  times_of_day: string[] | null
+  duration: string | null
+  route: string | null
+  notes: string | null
+  starts_on: string | null
+  ends_on: string | null
+}
+
+export type Prescription = {
+  id: string
+  prescription_number: string | null
+  diagnosis_note: string | null
+  notes: string | null
+  created_at: string
+  valid_until: string | null
+  doctor_name: string
+  active: boolean
+  items: Medication[]
 }
 
 async function authHeader(): Promise<Record<string, string>> {
@@ -152,14 +185,29 @@ export async function getMyPatient(): Promise<PatientInfo | null> {
   return body.patient ?? null
 }
 
-// --- Update my patient record ---
-export async function updateMyPatient(input: { full_name?: string; mobile_number?: string }) {
+// --- Update my patient record (contact details and/or medical profile) ---
+export async function updateMyPatient(input: {
+  full_name?: string
+  mobile_number?: string
+  allergies?: string[]
+  chronic_conditions?: string[]
+  blood_type?: string | null
+  medical_notes?: string | null
+  mark_reviewed?: boolean
+}) {
   const res = await fetch(`${API_URL}/api/patient/me`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(input),
   })
   return jsonOrThrow(res)
+}
+
+// --- What my doctors have prescribed me ---
+export async function getMyPrescriptions(): Promise<Prescription[]> {
+  const res = await fetch(`${API_URL}/api/patient/prescriptions`, { headers: await authHeader() })
+  const body = await jsonOrThrow(res)
+  return body.prescriptions ?? []
 }
 
 // --- Rate a visit (1-5). Editing re-submits the same appointment. ---

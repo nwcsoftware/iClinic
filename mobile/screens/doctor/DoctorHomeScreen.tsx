@@ -38,7 +38,12 @@ function Bar({ value, max, label, isToday }: { value: number; max: number; label
   )
 }
 
-export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
+export default function DoctorHomeScreen({
+  doctor, onOpenVisits,
+}: {
+  doctor: DoctorMe
+  onOpenVisits: () => void
+}) {
   const insets = useSafeAreaInsets()
   const [data, setData] = useState<DoctorOverview | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -120,7 +125,12 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
           {/* Today's schedule */}
           <FadeInUp delay={200}>
             <View style={{ marginTop: 26 }}>
-              <Text style={[type.h2, { marginBottom: 12 }]}>Today's schedule</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={[type.h2, { flex: 1 }]}>Today&apos;s schedule</Text>
+                <Pressable onPress={onOpenVisits} hitSlop={8}>
+                  <Text style={styles.allVisits}>All visits</Text>
+                </Pressable>
+              </View>
               {!data || data.today.length === 0 ? (
                 <Card>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -181,6 +191,7 @@ export default function DoctorHomeScreen({ doctor }: { doctor: DoctorMe }) {
 }
 
 const styles = StyleSheet.create({
+  allVisits: { color: colors.doc, fontWeight: '800', fontSize: 13.5 },
   actionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 12, paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,

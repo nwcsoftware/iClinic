@@ -15,7 +15,7 @@ function age(dob: string | null): string | null {
   return years > 0 && years < 130 ? `${years} yrs` : null
 }
 
-export default function DoctorPatientsScreen() {
+export default function DoctorPatientsScreen({ onOpenPatient }: { onOpenPatient: (id: string) => void }) {
   const insets = useSafeAreaInsets()
   const [patients, setPatients] = useState<DoctorPatient[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,7 +60,7 @@ export default function DoctorPatientsScreen() {
         ) : (
           filtered.map((p, i) => (
             <FadeInUp key={p.id} delay={Math.min(i, 6) * 55}>
-              <Card style={{ marginBottom: 12 }}>
+              <Card style={{ marginBottom: 12 }} onPress={() => onOpenPatient(p.id)}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <Avatar name={p.full_name} size={50} />
                   <View style={{ flex: 1 }}>
@@ -74,6 +74,7 @@ export default function DoctorPatientsScreen() {
                     <Text style={styles.visitCount}>{p.visits}</Text>
                     <Text style={styles.visitLabel}>visit{p.visits === 1 ? '' : 's'}</Text>
                   </View>
+                  <Feather name="chevron-right" size={18} color={colors.textFaint} />
                 </View>
               </Card>
             </FadeInUp>

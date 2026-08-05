@@ -26,13 +26,14 @@ function greetingKey(): 'home.morning' | 'home.afternoon' | 'home.evening' {
 
 
 export default function HomeScreen({
-  patient, onStartTriage, onOpenDoctors, onPickDoctor, onViewVisits,
+  patient, onStartTriage, onOpenDoctors, onPickDoctor, onViewVisits, onOpenMedical,
 }: {
   patient: PatientInfo | null
   onStartTriage: () => void
   onOpenDoctors: () => void
   onPickDoctor: (d: Doctor) => void
   onViewVisits: () => void
+  onOpenMedical: () => void
 }) {
   const insets = useSafeAreaInsets()
   const { t, locale, isRTL } = useI18n()
@@ -115,6 +116,26 @@ export default function HomeScreen({
           </View>
         </FadeInUp>
 
+        {/* Nudge to complete the medical profile. Disappears once they have
+            saved the section, even if they declared nothing. */}
+        {patient && !patient.medical_reviewed_at
+          && !(patient.allergies?.length || patient.chronic_conditions?.length) ? (
+          <FadeInUp delay={100}>
+            <Card onPress={onOpenMedical} style={{ marginTop: 16, borderColor: colors.brandSoft, borderWidth: 1.5 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={styles.promptIcon}>
+                  <Feather name="heart" size={17} color={colors.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={type.h2}>{t('medical.prompt')}</Text>
+                  <Text style={[type.sub, { marginTop: 2 }]}>{t('medical.promptSub')}</Text>
+                </View>
+                <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.brand} />
+              </View>
+            </Card>
+          </FadeInUp>
+        ) : null}
+
         {/* Next appointment */}
         {nextVisit && (
           <FadeInUp delay={120}>
@@ -178,6 +199,10 @@ export default function HomeScreen({
 }
 
 const styles = StyleSheet.create({
+  promptIcon: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.brandSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 18,
   },
