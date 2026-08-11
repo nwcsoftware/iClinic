@@ -90,6 +90,9 @@ export type BillingInfo = {
     cancel_via_provider: boolean
     card_provider?: string | null
     test_mode?: boolean
+    // True when the processor bills every month by itself, so the app should
+    // not offer prepaid blocks.
+    recurring?: boolean
   }
   plans?: { key: string; months: number; amount_usd: number; label: string; save_pct: number }[]
   instructions: {

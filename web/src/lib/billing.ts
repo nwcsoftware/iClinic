@@ -75,6 +75,9 @@ export type BillingEvent = {
   receipt_url: string | null
   failure_reason: string | null
   card: NormalizedCard | null
+  // Provider-side ids, stored so we can later cancel or open a billing portal.
+  subscription_id?: string | null
+  customer_id?: string | null
   raw: unknown
 }
 
@@ -82,7 +85,7 @@ export interface BillingProvider {
   readonly name: string
   capabilities(): BillingCapabilities
   /** Where to send the doctor to pay. null when there is nothing hosted. */
-  createCheckoutUrl(input: { doctorId: string; email: string | null }): Promise<string | null>
+  createCheckoutUrl(input: { doctorId: string; email: string | null; plan?: string }): Promise<string | null>
   /** Provider-hosted page to change the card. null when unsupported. */
   createPortalUrl(input: { doctorId: string; customerId: string | null }): Promise<string | null>
   /** Verify the signature and normalize. null means reject the request. */
@@ -120,8 +123,44 @@ class ManualProvider implements BillingProvider {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Paddle — Merchant of Record. Accepts cards worldwide and owns the recurring
+// billing, so there is no renewal logic on our side: we mirror its webhooks.
+// ---------------------------------------------------------------------------
+class PaddleProvider implements BillingProvider {
+  readonly name = 'paddle'
+
+  capabilities(): BillingCapabilities {
+    return {
+      provider: this.name,
+      can_pay_by_card: true,
+      // Paddle hosts the "update your card" page.
+      can_self_serve: true,
+      // Cancelling must go through Paddle, or it would keep charging the card.
+      cancel_via_provider: true,
+    }
+  }
+
+  async createCheckoutUrl(input: { doctorId: string; email: string | null; plan?: string }) {
+    const { createCheckout } = await import('./paddle')
+    return createCheckout(input)
+  }
+
+  async createPortalUrl(input: { doctorId: string; customerId: string | null }) {
+    const { createPortal } = await import('./paddle')
+    return createPortal(input.customerId)
+  }
+
+  async verifyWebhook(rawBody: string, headers: Headers): Promise<BillingEvent | null> {
+    const { verifySignature, parseEvent } = await import('./paddle')
+    if (!verifySignature(rawBody, headers.get('paddle-signature'))) return null
+    return parseEvent(rawBody)
+  }
+}
+
 const PROVIDERS: Record<string, BillingProvider> = {
   manual: new ManualProvider(),
+  paddle: new PaddleProvider(),
 }
 
 export function getBillingProvider(): BillingProvider {

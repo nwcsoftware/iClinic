@@ -3,7 +3,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBearerDoctor, getAccess } from '@/lib/doctor-auth'
 import { getBillingProvider, PLANS, getPlan } from '@/lib/billing'
 import { areebaConfigured, areebaIsTestMerchant } from '@/lib/areeba'
+import { paddleConfigured, paddleIsSandbox } from '@/lib/paddle'
 import { startCardCheckout } from '@/lib/billing-checkout'
+
+// Paddle is a full Merchant of Record and owns recurring billing, so it wins
+// when configured. Areeba is the local card fallback; manual is last.
+function cardRail(providerName: string): 'paddle' | 'areeba' | null {
+  if (providerName === 'paddle' && paddleConfigured()) return 'paddle'
+  if (areebaConfigured()) return 'areeba'
+  return null
+}
 
 // Columns added by migration 0006. Selected separately so the page keeps
 // working before that migration is applied.
@@ -102,14 +111,23 @@ export async function GET(request: Request) {
       card,
       next_charge,
       payments,
-      capabilities: {
-        ...provider.capabilities(),
-        // Areeba is its own rail: cards via MPGS, verified server-side.
-        can_pay_by_card: areebaConfigured() || provider.capabilities().can_pay_by_card,
-        card_provider: areebaConfigured() ? 'areeba' : null,
-        test_mode: areebaConfigured() ? areebaIsTestMerchant() : false,
-      },
-      plans: Object.values(PLANS),
+      capabilities: (() => {
+        const caps = provider.capabilities()
+        const rail = cardRail(provider.name)
+        return {
+          ...caps,
+          can_pay_by_card: rail !== null || caps.can_pay_by_card,
+          card_provider: rail,
+          test_mode: rail === 'paddle' ? paddleIsSandbox()
+            : rail === 'areeba' ? areebaIsTestMerchant()
+            : false,
+          // Paddle bills monthly on its own, so the app should not offer
+          // prepaid blocks alongside it.
+          recurring: rail === 'paddle',
+        }
+      })(),
+      // Prepaid blocks only make sense on the pay-once Areeba rail.
+      plans: cardRail(provider.name) === 'paddle' ? [] : Object.values(PLANS),
       instructions: {
         whish: process.env.PAY_WHISH_NUMBER ?? null,
         omt: process.env.PAY_OMT_NAME ?? null,
@@ -151,7 +169,22 @@ export async function POST(request: Request) {
     const provider = getBillingProvider()
 
     if (action === 'checkout') {
-      // Areeba takes priority when configured: it is the real card rail.
+      // Paddle first: it is a Merchant of Record and runs the subscription.
+      if (cardRail(provider.name) === 'paddle') {
+        const { data: sub } = await admin
+          .from('doctor_subscriptions')
+          .select('billing_email')
+          .eq('doctor_id', doctor.id)
+          .maybeSingle()
+
+        const url = await provider.createCheckoutUrl({
+          doctorId: doctor.id,
+          email: (sub?.billing_email as string) ?? null,
+          plan: typeof body.plan === 'string' ? body.plan : undefined,
+        })
+        return NextResponse.json({ url })
+      }
+
       if (areebaConfigured()) {
         // The plan key is the only thing the client chooses. The price comes
         // from the server table, so a tampered request cannot buy a year for $1.
@@ -191,6 +224,32 @@ export async function POST(request: Request) {
         customerId: (sub?.provider_customer_id as string) ?? null,
       })
       return NextResponse.json({ url })
+    }
+
+    // With a Merchant of Record, flipping our own flag is not enough — the
+    // card would keep being charged. Tell Paddle first; if that fails, do not
+    // pretend locally that the subscription was cancelled.
+    if (cardRail(provider.name) === 'paddle') {
+      const { data: sub } = await admin
+        .from('doctor_subscriptions')
+        .select('provider_subscription_id')
+        .eq('doctor_id', doctor.id)
+        .maybeSingle()
+
+      const subId = (sub?.provider_subscription_id as string) ?? null
+      if (!subId) {
+        return NextResponse.json({ error: 'No active card subscription to change' }, { status: 400 })
+      }
+      try {
+        const paddle = await import('@/lib/paddle')
+        if (action === 'cancel') await paddle.cancelSubscription(subId)
+        else await paddle.resumeSubscription(subId)
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'Could not update the subscription' },
+          { status: 502 },
+        )
+      }
     }
 
     const { data, error } = await admin

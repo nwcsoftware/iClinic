@@ -91,6 +91,10 @@ async function applyEvent(admin: Admin, event: BillingEvent, providerName: strin
   // provider records which processor last wrote this row.
   const sub: Record<string, unknown> = { updated_at: now, provider: providerName, ...cardFields }
 
+  // Keep the processor's own ids so we can cancel or open its portal later.
+  if (event.subscription_id) sub.provider_subscription_id = event.subscription_id
+  if (event.customer_id) sub.provider_customer_id = event.customer_id
+
   switch (event.type) {
     case 'payment_succeeded':
       sub.status = 'active'
@@ -142,6 +146,7 @@ async function applyEvent(admin: Admin, event: BillingEvent, providerName: strin
         failure_reason: event.failure_reason,
         card_brand: card?.brand ?? null,
         card_last4: card?.last4 ?? null,
+        provider: providerName,
         provider_event_id: event.id,
       })
     // 23505 means the ledger already has it — harmless on a partial retry.

@@ -226,7 +226,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
         <FadeInUp delay={110}>
           {cap?.can_pay_by_card ? (
             <>
-              {info?.plans?.length ? (
+              {info?.plans?.length && !cap.recurring ? (
                 <View style={{ marginTop: 20 }}>
                   <Text style={[type.label, { marginBottom: 10 }]}>Choose how long to pay for</Text>
                   {info.plans.map((p) => {
@@ -270,12 +270,16 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
                 {busy === 'checkout' ? <ActivityIndicator color="#fff" /> : (
                   <>
                     <Feather name="credit-card" size={18} color="#fff" />
-                    <Text style={styles.payBtnText}>Pay by card</Text>
+                    <Text style={styles.payBtnText}>
+                      {cap.recurring ? 'Subscribe by card' : 'Pay by card'}
+                    </Text>
                   </>
                 )}
               </Pressable>
               <Text style={styles.cardNote}>
-                Works with any Visa or Mastercard, including the free virtual Visa card in the Whish app.
+                {cap.recurring
+                  ? 'Visa, Mastercard, Amex, Apple Pay and Google Pay. Renews automatically each month — cancel any time.'
+                  : 'Works with any Visa or Mastercard, including the free virtual Visa card in the Whish app.'}
               </Text>
             </>
           ) : null}
