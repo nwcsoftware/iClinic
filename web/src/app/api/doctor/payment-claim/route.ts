@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBearerDoctor } from '@/lib/doctor-auth'
 import { PLANS, getPlan } from '@/lib/billing'
+import { notifyAdmin } from '@/lib/notify-admin'
 
 // POST /api/doctor/payment-claim   (Bearer auth, NOT subscription-gated)
 // Body: { plan: 'm1'|'m3'|'m12', method: 'whish'|'omt'|'bank_transfer'|'cash', reference?, note? }
@@ -70,6 +71,24 @@ export async function POST(request: Request) {
       }
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
+
+    // The doctor is blocked until this is approved, so the alert goes out
+    // immediately. Awaited so a serverless function is not killed mid-send,
+    // but its failure is swallowed — the claim is already safely recorded.
+    const origin = process.env.PUBLIC_WEB_URL ?? new URL(request.url).origin
+    await notifyAdmin({
+      subject: `Payment reported: ${doctor.full_name} — $${plan.amount_usd.toFixed(2)}`,
+      heading: 'A doctor reported a payment',
+      lines: [
+        { label: 'Doctor', value: doctor.full_name },
+        { label: 'Amount', value: `$${plan.amount_usd.toFixed(2)} — ${plan.label}` },
+        { label: 'Method', value: method.replace('_', ' ') },
+        { label: 'Reference', value: reference || 'not given' },
+        ...(note ? [{ label: 'Note', value: note }] : []),
+      ],
+      actionUrl: `${origin}/admin/billing`,
+      actionLabel: 'Review and approve',
+    }).catch(() => ({ sent: false }))
 
     return NextResponse.json({ ok: true, claim }, { status: 201 })
   } catch (err) {

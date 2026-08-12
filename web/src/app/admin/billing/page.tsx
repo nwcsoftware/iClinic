@@ -22,6 +22,24 @@ type Summary = {
 
 const KEY_STORE = 'iclinic.adminKey'
 
+// sessionStorage clears when the tab closes, which is right on a shared
+// machine but means re-typing the key every time an alert lands on your phone.
+// "Remember on this device" opts into localStorage instead — off by default.
+function readKey(): string {
+  try {
+    return localStorage.getItem(KEY_STORE) ?? sessionStorage.getItem(KEY_STORE) ?? ''
+  } catch { return '' }
+}
+function writeKey(k: string, remember: boolean) {
+  try {
+    if (remember) localStorage.setItem(KEY_STORE, k)
+    else sessionStorage.setItem(KEY_STORE, k)
+  } catch { /* private mode */ }
+}
+function clearKey() {
+  try { localStorage.removeItem(KEY_STORE); sessionStorage.removeItem(KEY_STORE) } catch { /* no-op */ }
+}
+
 export default function AdminBillingPage() {
   const [key, setKey] = useState('')
   const [entered, setEntered] = useState('')
@@ -32,8 +50,10 @@ export default function AdminBillingPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
 
+  const [remember, setRemember] = useState(false)
+
   useEffect(() => {
-    const saved = sessionStorage.getItem(KEY_STORE)
+    const saved = readKey()
     if (saved) setKey(saved)
   }, [])
 
@@ -48,15 +68,15 @@ export default function AdminBillingPage() {
       setDoctors(body.doctors ?? [])
       setClaims(body.claims ?? [])
       setSummary(body.summary ?? null)
-      sessionStorage.setItem(KEY_STORE, k)
+      writeKey(k, remember)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load')
       setKey('')
-      sessionStorage.removeItem(KEY_STORE)
+      clearKey()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [remember])
 
   useEffect(() => { if (key) load(key) }, [key, load])
 
@@ -94,6 +114,10 @@ export default function AdminBillingPage() {
             onChange={(e) => setEntered(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && entered.trim()) setKey(entered.trim()) }}
           />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 14px', fontSize: 13.5, color: '#5B6577' }}>
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            Remember on this device
+          </label>
           <button style={S.btn} onClick={() => entered.trim() && setKey(entered.trim())}>Open</button>
           {error ? <p style={S.err}>{error}</p> : null}
         </div>
@@ -109,7 +133,7 @@ export default function AdminBillingPage() {
           <button style={S.ghost} onClick={() => load(key)} disabled={loading}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
-          <button style={S.ghost} onClick={() => { sessionStorage.removeItem(KEY_STORE); setKey(''); setEntered('') }}>
+          <button style={S.ghost} onClick={() => { clearKey(); setKey(''); setEntered('') }}>
             Lock
           </button>
         </div>
