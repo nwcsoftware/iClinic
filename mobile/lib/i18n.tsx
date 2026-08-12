@@ -208,6 +208,10 @@ const STRINGS = {
     'guide.title5': 'Keep your profile up to date',
     'guide.body5': 'Add your allergies and long-term illnesses so any doctor treating you knows before the visit.',
 
+    'legal.terms': 'Terms',
+    'legal.privacy': 'Privacy',
+    'legal.refunds': 'Refunds',
+
     'tab.home': 'Home',
     'tab.doctors': 'Doctors',
     'tab.visits': 'Visits',
@@ -404,6 +408,10 @@ const STRINGS = {
     'guide.title5': 'Gardez votre profil à jour',
     'guide.body5': 'Ajoutez vos allergies et maladies chroniques pour que tout médecin le sache avant la visite.',
 
+    'legal.terms': 'Conditions',
+    'legal.privacy': 'Confidentialité',
+    'legal.refunds': 'Remboursements',
+
     'tab.home': 'Accueil',
     'tab.doctors': 'Médecins',
     'tab.visits': 'Visites',
@@ -599,6 +607,10 @@ const STRINGS = {
     'guide.body4': 'الزر الأحمر يعرض أرقام الطوارئ المحلية ويتصل بها نيابة عنك.',
     'guide.title5': 'حافظ على تحديث ملفك',
     'guide.body5': 'أضف الحساسية والأمراض المزمنة ليعرفها أي طبيب يعالجك قبل الزيارة.',
+
+    'legal.terms': 'الشروط',
+    'legal.privacy': 'الخصوصية',
+    'legal.refunds': 'الاسترجاع',
 
     'tab.home': 'الرئيسية',
     'tab.doctors': 'الأطباء',

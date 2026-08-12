@@ -164,4 +164,60 @@ if (!html.includes('apple-touch-icon')) {
 } else {
   console.log('PWA tags already present')
 }
+
+// ---------------------------------------------------------------------------
+// Anything that reads this page without running JS — a payment provider's
+// review tool, a link preview, a search crawler — otherwise sees only
+// "You need to enable JavaScript". Give it a real description of the product
+// and links to the policies, which is exactly what a provider looks for.
+// ---------------------------------------------------------------------------
+const NOSCRIPT = `
+<noscript>
+  <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:0 auto;padding:40px 24px;color:#1A2333">
+    <h1 style="font-size:26px;color:#0D1526">iClinic</h1>
+    <p style="line-height:1.7">Describe how you feel, find the right specialist, book a visit, and read your
+    prescriptions. Free for patients in Lebanon. Doctors subscribe for $9.99 per month to appear in the app
+    and accept bookings.</p>
+    <p style="line-height:1.7"><strong>iClinic does not provide medical advice or diagnosis.</strong>
+    In an emergency call 112 in Lebanon.</p>
+    <p style="line-height:1.7">
+      <a href="/terms">Terms of Service</a> ·
+      <a href="/privacy">Privacy Policy</a> ·
+      <a href="/refund-policy">Refunds &amp; Cancellation</a>
+    </p>
+    <p style="line-height:1.7">Contact: <a href="mailto:jadchamy2001@gmail.com">jadchamy2001@gmail.com</a></p>
+  </div>
+</noscript>`.trim()
+
+html = html.replace(
+  /<noscript>[\s\S]*?<\/noscript>/,
+  NOSCRIPT,
+)
+if (!html.includes('iClinic does not provide medical advice')) {
+  // No existing noscript block to replace — put ours right after <body>.
+  html = html.replace(/<body[^>]*>/, (m) => `${m}\n${NOSCRIPT}`)
+}
+console.log('added no-JS product description and policy links')
+
 await fs.writeFile(htmlPath, html)
+
+// ---------------------------------------------------------------------------
+// The policies live on the web project, but the app is on its own domain and
+// that is the URL people (and reviewers) actually have. Proxy the three policy
+// paths across so they resolve on both domains.
+// ---------------------------------------------------------------------------
+// A redirect rather than a rewrite: proxying cross-origin from a static
+// deployment does not fire, and for a policy link the address bar changing is
+// no loss.
+const WEB_ORIGIN = process.env.WEB_ORIGIN ?? 'https://iclinic-web.vercel.app'
+await fs.writeFile(
+  path.join(DIST, 'vercel.json'),
+  JSON.stringify({
+    redirects: ['terms', 'privacy', 'refund-policy'].map((p) => ({
+      source: `/${p}`,
+      destination: `${WEB_ORIGIN}/${p}`,
+      permanent: false,
+    })),
+  }, null, 2),
+)
+console.log('added policy redirects -> ' + WEB_ORIGIN)

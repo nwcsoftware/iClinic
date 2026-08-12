@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, TextInput, Pressable, StyleSheet,
+  View, Text, TextInput, Pressable, StyleSheet, Linking,
   KeyboardAvoidingView, Platform, Animated, Easing, ActivityIndicator,
 } from 'react-native'
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons'
@@ -9,6 +9,10 @@ import { loginWithPassword } from '../lib/api'
 import { colors, radius, shadow, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
 import { AmbientBackground, FadeInUp } from '../components/motion'
+
+// The policies are served by the web project, which is a different origin to
+// the app. Falls back to the production site when the API URL is unset.
+const WEB_ORIGIN = process.env.EXPO_PUBLIC_API_URL ?? 'https://iclinic-web.vercel.app'
 
 // Endless soft pulse ring behind the logo — the login page breathes.
 function LogoPulse() {
@@ -35,7 +39,7 @@ function LogoPulse() {
 // Testing sign-in with a username and password.
 // doctor / doctor123   →  doctor mode
 // patient / patient123 →  patient mode
-export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
+export default function AuthScreen({ onAuthed, onBack }: { onAuthed: () => void; onBack?: () => void }) {
   const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -72,6 +76,12 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <AmbientBackground tone="onBrand" />
+      {onBack ? (
+        <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
+          <Feather name="chevron-left" size={22} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.backText}>Back</Text>
+        </Pressable>
+      ) : null}
       <FadeInUp>
         <View style={styles.hero}>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -140,12 +150,39 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
       </FadeInUp>
 
       <Text style={styles.footer}>{t('auth.emergencyNote')}</Text>
+
+      {/* Reachable without signing in — providers and app stores both expect
+          the policies to be one tap from the first screen. */}
+      <View style={styles.legalRow}>
+        {[
+          { label: t('legal.terms'), path: 'terms' },
+          { label: t('legal.privacy'), path: 'privacy' },
+          { label: t('legal.refunds'), path: 'refund-policy' },
+        ].map((l) => (
+          <Pressable key={l.path} onPress={() => Linking.openURL(`${WEB_ORIGIN}/${l.path}`)} hitSlop={6}>
+            <Text style={styles.legalLink}>{l.label}</Text>
+          </Pressable>
+        ))}
+      </View>
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.brand, justifyContent: 'center', padding: 24 },
+  back: {
+    position: 'absolute', top: 46, left: 14, zIndex: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 2, padding: 6,
+  },
+  backText: { color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: '700' },
+  legalRow: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+    gap: 14, marginTop: 10,
+  },
+  legalLink: {
+    color: 'rgba(255,255,255,0.72)', fontSize: 12, fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   hero: { alignItems: 'center', marginBottom: 30 },
   logo: {
     width: 72, height: 72, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.16)',

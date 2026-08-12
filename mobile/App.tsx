@@ -10,6 +10,9 @@ import { getDoctorMe, type DoctorMe } from './lib/doctorApi'
 import { colors, shadow } from './lib/theme'
 import SplashScreen from './components/SplashScreen'
 import AuthScreen from './screens/AuthScreen'
+import LandingScreen from './screens/LandingScreen'
+import PolicyScreen from './screens/PolicyScreen'
+import type { Policy } from './lib/policies'
 import ProfileSetupScreen from './screens/ProfileSetupScreen'
 import HomeScreen from './screens/HomeScreen'
 import DoctorsScreen from './screens/DoctorsScreen'
@@ -46,7 +49,9 @@ type DoctorOverlay =
   | { kind: 'visits' }
   | { kind: 'prescribe'; visit: PrescribeTarget }
   | null
-type Phase = 'splash' | 'loading' | 'auth' | 'setup' | 'patient' | 'doctor' | 'paywall'
+// 'landing' is what a signed-out visitor sees first: what the product is, what
+// it costs, and the policies. 'auth' is one tap away from it.
+type Phase = 'splash' | 'loading' | 'landing' | 'auth' | 'setup' | 'patient' | 'doctor' | 'paywall'
 
 const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { key: 'home', icon: 'home', label: 'tab.home' },
@@ -100,6 +105,8 @@ function Main() {
   const [docOverlay, setDocOverlay] = useState<DoctorOverlay>(null)
   // First-run walkthrough. Shown once, then re-openable from Profile.
   const [showGuide, setShowGuide] = useState(false)
+  // A policy opened from the landing page, shown over it.
+  const [policy, setPolicy] = useState<Policy['key'] | null>(null)
   const [patient, setPatient] = useState<PatientInfo | null>(null)
   const [doctorMe, setDoctorMe] = useState<DoctorMe | null>(null)
   const splashDone = useRef(false)
@@ -145,7 +152,7 @@ function Main() {
     let active = true
     supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
-      const next = data.session ? await resolveAfterAuth() : 'auth'
+      const next = data.session ? await resolveAfterAuth() : 'landing'
       if (!active) return
       resolved.current = next
       setResolvedPhase(next)
@@ -154,7 +161,7 @@ function Main() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!active) return
       if (!session) {
-        setPhase('auth'); setPTab('home'); setDTab('dhome')
+        setPhase('landing'); setPTab('home'); setDTab('dhome')
         setOverlay(null); setPatient(null); setDoctorMe(null)
       }
     })
@@ -175,8 +182,25 @@ function Main() {
   if (phase === 'loading') {
     return <View style={styles.center}><ActivityIndicator size="large" color={colors.brand} /></View>
   }
+  // A policy is readable from the landing page without an account.
+  if (policy) {
+    return <PolicyScreen policy={policy} onBack={() => setPolicy(null)} />
+  }
+  if (phase === 'landing') {
+    return (
+      <LandingScreen
+        onSignIn={() => setPhase('auth')}
+        onOpenPolicy={setPolicy}
+      />
+    )
+  }
   if (phase === 'auth') {
-    return <AuthScreen onAuthed={async () => { setPhase(await resolveAfterAuth()) }} />
+    return (
+      <AuthScreen
+        onAuthed={async () => { setPhase(await resolveAfterAuth()) }}
+        onBack={() => setPhase('landing')}
+      />
+    )
   }
   if (phase === 'setup') {
     return <ProfileSetupScreen onDone={async () => { setPhase(await resolveAfterAuth()) }} />
@@ -188,7 +212,7 @@ function Main() {
       <PaywallScreen
         doctor={doctorMe}
         onRetry={async () => { setPhase(await resolveAfterAuth()) }}
-        onSignedOut={() => setPhase('auth')}
+        onSignedOut={() => setPhase('landing')}
       />
     )
   }
@@ -242,7 +266,7 @@ function Main() {
           {dTab === 'dprofile' && (
             <DoctorProfileScreen
               doctor={doctorMe}
-              onSignedOut={() => setPhase('auth')}
+              onSignedOut={() => setPhase('landing')}
               onOpenBilling={() => setDocOverlay({ kind: 'billing' })}
             />
           )}
@@ -312,7 +336,7 @@ function Main() {
         {pTab === 'profile' && (
           <ProfileScreen
             patient={patient}
-            onSignedOut={() => setPhase('auth')}
+            onSignedOut={() => setPhase('landing')}
             onPatientUpdated={setPatient}
             onOpenMedical={() => setOverlay({ kind: 'medical' })}
             onOpenGuide={() => setOverlay({ kind: 'guide' })}
