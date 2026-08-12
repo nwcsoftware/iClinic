@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBearerDoctor, getAccess } from '@/lib/doctor-auth'
+import { PLANS } from '@/lib/billing'
 
 // GET /api/doctor/subscription — the doctor's own billing status, their recent
 // payments, and how to pay. Not gated: this is the page they land on when
@@ -38,6 +39,8 @@ export async function GET(request: Request) {
       payments: payments ?? [],
       instructions,
       checkout_url,
+      // Needed by the "I've paid" form so the doctor can say what they bought.
+      plans: Object.values(PLANS),
     })
   } catch (err) {
     console.error('doctor/subscription error:', err)

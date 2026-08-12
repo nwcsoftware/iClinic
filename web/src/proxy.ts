@@ -32,7 +32,10 @@ export async function proxy(request: NextRequest) {
   // to it, and neither carries a staff session cookie. It is safe because the
   // order id is unguessable and the pages expose only an amount — activation
   // is decided by asking the gateway server-side, never by who is browsing.
-  const publicRoutes = ['/', '/login', '/register', '/pay']
+  // /admin has its own gate: every request it makes carries ADMIN_API_KEY and
+  // the API rejects anything else, so the page itself shows nothing without it.
+  // It is listed here only so it does not bounce to the staff login.
+  const publicRoutes = ['/', '/login', '/register', '/pay', '/admin']
   const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'))
 
   if (!user && !isPublic) {

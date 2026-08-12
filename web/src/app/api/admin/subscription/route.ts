@@ -57,7 +57,34 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json({ doctors: rows })
+    // Payments doctors have reported but nobody has approved yet. This is the
+    // queue you work through after money lands in Whish or OMT.
+    const { data: claims } = await admin
+      .from('subscription_payments')
+      .select('id, doctor_id, amount_usd, method, reference, months, description, failure_reason, created_at')
+      .eq('provider', 'claim')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(100)
+
+    const nameById = new Map(rows.map((r) => [r.doctor_id, r.full_name]))
+
+    return NextResponse.json({
+      doctors: rows,
+      claims: (claims ?? []).map((c) => ({
+        ...c,
+        doctor_name: nameById.get(c.doctor_id as string) ?? 'Unknown doctor',
+        // failure_reason doubles as the doctor's free-text note on a claim.
+        note: c.failure_reason,
+      })),
+      summary: {
+        total: rows.length,
+        visible: rows.filter((r) => r.visible_to_patients).length,
+        expiring_7d: rows.filter((r) => r.visible_to_patients && r.days_left <= 7).length,
+        lapsed: rows.filter((r) => !r.visible_to_patients).length,
+        pending_claims: (claims ?? []).length,
+      },
+    })
   } catch (err) {
     console.error('admin/subscription GET error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -69,6 +96,42 @@ export async function POST(request: Request) {
   try {
     const admin = createAdminClient()
     const body = await request.json().catch(() => ({}))
+
+    // Approving a doctor-reported payment: take the doctor, months, amount,
+    // method and reference straight off the claim so nothing is retyped.
+    let claimId: string | null = null
+    if (typeof body.claim_id === 'string' && body.claim_id) {
+      const { data: claim } = await admin
+        .from('subscription_payments')
+        .select('id, doctor_id, amount_usd, method, reference, months, status, provider')
+        .eq('id', body.claim_id)
+        .maybeSingle()
+
+      if (!claim) return NextResponse.json({ error: 'Claim not found' }, { status: 404 })
+      if (claim.provider !== 'claim') {
+        return NextResponse.json({ error: 'Not a doctor-reported payment' }, { status: 400 })
+      }
+      if (claim.status !== 'pending') {
+        return NextResponse.json({ ok: true, already_handled: true, status: claim.status })
+      }
+
+      // Reject: mark it failed and change nothing about their access.
+      if (body.reject === true) {
+        await admin
+          .from('subscription_payments')
+          .update({ status: 'failed', failure_reason: typeof body.note === 'string' ? body.note : 'Rejected by admin' })
+          .eq('id', claim.id)
+          .eq('status', 'pending')
+        return NextResponse.json({ ok: true, rejected: true })
+      }
+
+      claimId = claim.id as string
+      body.doctor_id = claim.doctor_id
+      body.months = body.months ?? claim.months ?? 1
+      body.amount_usd = body.amount_usd ?? claim.amount_usd
+      body.method = body.method ?? claim.method
+      body.reference = body.reference ?? claim.reference
+    }
 
     // Resolve the doctor by id or by login email.
     let doctorId: string | null = typeof body.doctor_id === 'string' ? body.doctor_id : null
@@ -133,9 +196,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: payErr.message }, { status: 400 })
     }
 
+    // Close the claim last, so a failure above leaves it in the queue rather
+    // than silently marking it paid.
+    if (claimId) {
+      await admin
+        .from('subscription_payments')
+        .update({ status: 'paid', period_start: base.toISOString(), period_end: periodEnd.toISOString() })
+        .eq('id', claimId)
+        .eq('status', 'pending')
+    }
+
     return NextResponse.json({
       ok: true,
       doctor_id: doctorId,
+      claim_approved: claimId ?? undefined,
       status: 'active',
       current_period_end: periodEnd.toISOString(),
       months_added: months,

@@ -39,6 +39,7 @@ export type SubscriptionInfo = {
     note: string
   }
   checkout_url: string | null
+  plans?: { key: string; months: number; amount_usd: number; label: string; save_pct: number }[]
 }
 
 export type SavedCard = {
@@ -225,6 +226,22 @@ export async function billingAction(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(plan ? { action, plan } : { action }),
+  })
+  return jsonOrThrow(res)
+}
+
+// Tell the clinic you paid by Whish/OMT/bank/cash. Grants nothing on its own —
+// it queues the payment for approval.
+export async function reportPayment(input: {
+  plan: string
+  method: 'whish' | 'omt' | 'bank_transfer' | 'cash' | 'other'
+  reference?: string
+  note?: string
+}): Promise<{ ok: boolean; duplicate?: boolean }> {
+  const res = await fetch(`${API_URL}/api/doctor/payment-claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
   })
   return jsonOrThrow(res)
 }

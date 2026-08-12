@@ -8,6 +8,7 @@ import { getBilling, billingAction, type BillingInfo, type Payment } from '../..
 import { colors, radius, shadow, type } from '../../lib/theme'
 import { Card, TopBar } from '../../components/ui'
 import { DoctorAmbient, FadeInUp } from '../../components/motion'
+import ReportPaymentForm from '../../components/ReportPaymentForm'
 
 function money(n: number): string {
   return `$${Number(n).toFixed(2)}`
@@ -342,6 +343,8 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
                   <Text style={styles.contactText}>Send receipt: {inst.contact}</Text>
                 </Pressable>
               ) : null}
+
+              <ReportPaymentForm plans={info?.plans ?? []} onDone={load} />
             </Card>
           </FadeInUp>
         ) : null}

@@ -9,6 +9,7 @@ import { signOut } from '../../lib/supabase'
 import { colors, radius, shadow, type } from '../../lib/theme'
 import { Card } from '../../components/ui'
 import { DoctorAmbient, FadeInUp, ScaleIn } from '../../components/motion'
+import ReportPaymentForm from '../../components/ReportPaymentForm'
 
 const PERKS = [
   'Appear in the patient app and chatbot results',
@@ -134,6 +135,8 @@ export default function PaywallScreen({
                     <Text style={styles.contactText}>Send receipt: {inst.contact}</Text>
                   </Pressable>
                 ) : null}
+
+                <ReportPaymentForm plans={info?.plans ?? []} />
               </Card>
             </FadeInUp>
 
