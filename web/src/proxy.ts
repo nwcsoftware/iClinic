@@ -35,7 +35,13 @@ export async function proxy(request: NextRequest) {
   // /admin has its own gate: every request it makes carries ADMIN_API_KEY and
   // the API rejects anything else, so the page itself shows nothing without it.
   // It is listed here only so it does not bounce to the staff login.
-  const publicRoutes = ['/', '/login', '/register', '/pay', '/admin']
+  // The marketing page and the three policies must be readable by anyone —
+  // payment providers review them before approving a merchant account, and a
+  // policy behind a login is the same as no policy at all.
+  const publicRoutes = [
+    '/', '/login', '/register', '/pay', '/admin',
+    '/terms', '/privacy', '/refund-policy',
+  ]
   const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'))
 
   if (!user && !isPublic) {
