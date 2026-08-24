@@ -254,6 +254,19 @@ export async function book(input: {
   return jsonOrThrow(res) as Promise<{ appointment: Appointment }>
 }
 
+// One doctor by id, for jumping straight from a map marker into their profile.
+// Reads the same public_doctors view, so an unsubscribed doctor is not found
+// here either.
+export async function getDoctorById(id: string): Promise<Doctor | null> {
+  const { data, error } = await supabase
+    .from('public_doctors')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) return null
+  return (data as Doctor) ?? null
+}
+
 // --- Read doctors directly from Supabase (public_doctors view, RLS-open) ---
 // select('*') keeps this working before AND after the ratings migration.
 export async function getDoctors(): Promise<Doctor[]> {

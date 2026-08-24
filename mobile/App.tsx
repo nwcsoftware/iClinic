@@ -5,7 +5,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Feather } from '@expo/vector-icons'
 import { I18nProvider, useI18n } from './lib/i18n'
 import { supabase } from './lib/supabase'
-import { initPatient, type Doctor, type PatientInfo } from './lib/api'
+import { initPatient, getDoctorById, type Doctor, type PatientInfo } from './lib/api'
 import { getDoctorMe, type DoctorMe } from './lib/doctorApi'
 import { colors, shadow } from './lib/theme'
 import SplashScreen from './components/SplashScreen'
@@ -33,6 +33,9 @@ import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
 import DoctorBillingScreen from './screens/doctor/DoctorBillingScreen'
 import PaywallScreen from './screens/doctor/PaywallScreen'
 import EmergencyButton from './components/EmergencyButton'
+import FloatingMapNavButton from './components/FloatingMapNavButton'
+import MapScreen from './screens/MapScreen'
+import { getMapLocations } from './lib/mapApi'
 
 type PatientTab = 'home' | 'doctors' | 'visits' | 'meds' | 'profile'
 type DoctorTab = 'dhome' | 'schedule' | 'patients' | 'dprofile'
@@ -42,6 +45,7 @@ type Overlay =
   | { kind: 'booking'; doctor: Doctor; reason: string }
   | { kind: 'medical' }
   | { kind: 'guide' }
+  | { kind: 'map' }
   | null
 type DoctorOverlay =
   | { kind: 'billing' }
@@ -53,11 +57,13 @@ type DoctorOverlay =
 // it costs, and the policies. 'auth' is one tap away from it.
 type Phase = 'splash' | 'loading' | 'landing' | 'auth' | 'setup' | 'patient' | 'doctor' | 'paywall'
 
-const PATIENT_TABS: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
+// Split either side of the floating map button that occupies the centre slot.
+const PATIENT_TABS_LEFT: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { key: 'home', icon: 'home', label: 'tab.home' },
   { key: 'doctors', icon: 'users', label: 'tab.doctors' },
+]
+const PATIENT_TABS_RIGHT: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { key: 'visits', icon: 'calendar', label: 'tab.visits' },
-  { key: 'meds', icon: 'clipboard', label: 'tab.meds' },
   { key: 'profile', icon: 'user', label: 'tab.profile' },
 ]
 
@@ -97,6 +103,40 @@ function TabBar<T extends string>({
   )
 }
 
+// Patient tab bar: two tabs, the floating map orb, two more tabs.
+function PatientTabBar({
+  tab, onTab, onMap, mapActive, hasNearby,
+}: {
+  tab: PatientTab
+  onTab: (t: PatientTab) => void
+  onMap: () => void
+  mapActive: boolean
+  hasNearby: boolean
+}) {
+  const insets = useSafeAreaInsets()
+  const { t } = useI18n()
+  const item = (tb: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }) => {
+    const active = tb.key === tab && !mapActive
+    return (
+      <Pressable key={tb.key} onPress={() => onTab(tb.key)} style={styles.tabItem} hitSlop={6}>
+        <View style={[styles.tabIconWrap, active && { backgroundColor: colors.brandSoft }]}>
+          <Feather name={tb.icon} size={19} color={active ? colors.brand : colors.tabInactive} />
+        </View>
+        <Text style={[styles.tabLabel, active && { color: colors.brand, fontWeight: '800' }]}>
+          {t(tb.label as never)}
+        </Text>
+      </Pressable>
+    )
+  }
+  return (
+    <View style={[styles.tabbar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {PATIENT_TABS_LEFT.map(item)}
+      <FloatingMapNavButton onPress={onMap} active={mapActive} hasNearby={hasNearby} />
+      {PATIENT_TABS_RIGHT.map(item)}
+    </View>
+  )
+}
+
 function Main() {
   const [phase, setPhase] = useState<Phase>('splash')
   const [pTab, setPTab] = useState<PatientTab>('home')
@@ -107,6 +147,9 @@ function Main() {
   const [showGuide, setShowGuide] = useState(false)
   // A policy opened from the landing page, shown over it.
   const [policy, setPolicy] = useState<Policy['key'] | null>(null)
+  // Whether the map has anything on it — the orb only pulses when it does,
+  // because an animation that never stops stops being noticed.
+  const [mapHasPlaces, setMapHasPlaces] = useState(false)
   const [patient, setPatient] = useState<PatientInfo | null>(null)
   const [doctorMe, setDoctorMe] = useState<DoctorMe | null>(null)
   const splashDone = useRef(false)
@@ -139,6 +182,16 @@ function Main() {
   useEffect(() => {
     if (splashOver && resolvedPhase && phase === 'splash') setPhase(resolvedPhase)
   }, [splashOver, resolvedPhase, phase])
+
+  // Cheap probe so the tab bar knows whether the map is worth opening.
+  useEffect(() => {
+    if (phase !== 'patient') return
+    let active = true
+    getMapLocations()
+      .then((l) => { if (active) setMapHasPlaces(l.length > 0) })
+      .catch(() => { /* the orb simply does not pulse */ })
+    return () => { active = false }
+  }, [phase])
 
   // New patients get the walkthrough before they see the app.
   useEffect(() => {
@@ -281,6 +334,22 @@ function Main() {
   if (showGuide) return <GuideScreen onDone={() => setShowGuide(false)} />
   if (overlay?.kind === 'guide') return <GuideScreen onDone={() => setOverlay(null)} />
 
+  if (overlay?.kind === 'map') {
+    return (
+      <MapScreen
+        onBack={() => setOverlay(null)}
+        onPickDoctor={async (doctorId) => {
+          // Straight from a marker into booking with that doctor.
+          try {
+            const doctor = await getDoctorById(doctorId)
+            if (doctor) { setOverlay({ kind: 'booking', doctor, reason: '' }); return }
+          } catch { /* fall back to the directory */ }
+          setOverlay(null)
+          setPTab('doctors')
+        }}
+      />
+    )
+  }
   if (overlay?.kind === 'medical') {
     return (
       <MedicalInfoScreen
@@ -340,11 +409,18 @@ function Main() {
             onPatientUpdated={setPatient}
             onOpenMedical={() => setOverlay({ kind: 'medical' })}
             onOpenGuide={() => setOverlay({ kind: 'guide' })}
+            onOpenMeds={() => setPTab('meds')}
           />
         )}
       </View>
       <EmergencyButton />
-      <TabBar tabs={PATIENT_TABS} tab={pTab} onTab={setPTab} accent={colors.brand} accentSoft={colors.brandSoft} />
+      <PatientTabBar
+        tab={pTab}
+        onTab={setPTab}
+        onMap={() => setOverlay({ kind: 'map' })}
+        mapActive={false}
+        hasNearby={mapHasPlaces}
+      />
     </View>
   )
 }
@@ -377,9 +453,11 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   tabbar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', backgroundColor: colors.card,
+    flexDirection: 'row', alignItems: 'flex-start', backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     paddingTop: 8, paddingHorizontal: 8,
+    // The floating orb overhangs the top edge.
+    overflow: 'visible',
   },
   tabItem: { flex: 1, alignItems: 'center', gap: 3 },
   tabIconWrap: {

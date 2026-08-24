@@ -27,13 +27,14 @@ function summariseMedical(
 }
 
 export default function ProfileScreen({
-  patient: initial, onSignedOut, onPatientUpdated, onOpenMedical, onOpenGuide,
+  patient: initial, onSignedOut, onPatientUpdated, onOpenMedical, onOpenGuide, onOpenMeds,
 }: {
   patient: PatientInfo | null
   onSignedOut: () => void
   onPatientUpdated: (p: PatientInfo) => void
   onOpenMedical: () => void
   onOpenGuide: () => void
+  onOpenMeds: () => void
 }) {
   const insets = useSafeAreaInsets()
   const { t, lang, setLang, isRTL } = useI18n()
@@ -92,6 +93,20 @@ export default function ProfileScreen({
             <Text style={[type.sub, { marginTop: 2 }]}>
               {summariseMedical(patient, t)}
             </Text>
+          </View>
+          <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.textFaint} />
+        </View>
+      </Card>
+
+      {/* Medicines lives here now that the map orb holds the centre tab slot */}
+      <Card style={{ marginBottom: 16 }} onPress={onOpenMeds}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+          <View style={styles.rowIcon}>
+            <Feather name="clipboard" size={16} color={colors.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={type.h2}>{t('meds.title')}</Text>
+            <Text style={[type.sub, { marginTop: 2 }]}>{t('meds.active')}</Text>
           </View>
           <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.textFaint} />
         </View>
