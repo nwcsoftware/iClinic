@@ -36,9 +36,8 @@ function LogoPulse() {
   )
 }
 
-// Testing sign-in with a username and password.
-// doctor / doctor123   →  doctor mode
-// patient / patient123 →  patient mode
+// Sign in with a username and password. The account's role decides which
+// shell the app opens into — doctor or patient.
 export default function AuthScreen({ onAuthed, onBack }: { onAuthed: () => void; onBack?: () => void }) {
   const { t } = useI18n()
   const [username, setUsername] = useState('')
@@ -140,12 +139,6 @@ export default function AuthScreen({ onAuthed, onBack }: { onAuthed: () => void;
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
-
-          <View style={styles.hintBox}>
-            <Text style={styles.hintTitle}>{t('auth.testAccounts')}</Text>
-            <Text style={styles.hintLine}>doctor  ·  doctor123</Text>
-            <Text style={styles.hintLine}>patient  ·  patient123</Text>
-          </View>
         </View>
       </FadeInUp>
 
@@ -191,7 +184,7 @@ const styles = StyleSheet.create({
   },
   appName: { fontSize: 32, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginTop: 16 },
   tagline: { fontSize: 14.5, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 10, lineHeight: 21 },
-  card: { backgroundColor: colors.card, borderRadius: radius.xl, padding: 22, ...shadow.raised },
+  card: { backgroundColor: colors.card, borderRadius: radius.xl, padding: 24, paddingBottom: 26, ...shadow.raised },
   label: { ...type.label, marginBottom: 8 },
   input: {
     borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 16,
@@ -214,10 +207,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#F6C9C9',
   },
   errorText: { flex: 1, color: colors.danger, fontSize: 13, lineHeight: 18, fontWeight: '600' },
-  hintBox: {
-    marginTop: 16, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
-  },
-  hintTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 6 },
-  hintLine: { fontSize: 12.5, color: colors.textFaint, lineHeight: 19 },
   footer: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'center', marginTop: 26, lineHeight: 17 },
 })

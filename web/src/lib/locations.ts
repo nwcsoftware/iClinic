@@ -22,7 +22,15 @@ export type HealthcareLocation = {
   longitude: number | null
   phone: string | null
   is_verified: boolean
+  formatted_address?: string | null
+  google_maps_url?: string | null
+  location_source?: string | null
 }
+
+export const LOCATION_SOURCES = [
+  'google_maps_link', 'current_location', 'map_picker', 'address_search', 'admin',
+] as const
+export type LocationSource = (typeof LOCATION_SOURCES)[number]
 
 // Lebanon's bounding box. Used to reject geocoding results that land in the
 // wrong country — "Saint George" matches a lot of places worldwide.
@@ -110,6 +118,9 @@ export async function findOrCreateLocation(
     longitude?: number | null
     phone?: string | null
     createdBy?: string | null
+    formattedAddress?: string | null
+    googleMapsUrl?: string | null
+    source?: LocationSource | null
   },
 ): Promise<{ location: HealthcareLocation; reused: boolean; geocoded: boolean }> {
   const name = input.name.trim().replace(/\s+/g, ' ')
@@ -119,7 +130,7 @@ export async function findOrCreateLocation(
   // Match on the same normalised key the unique index uses.
   const { data: existing } = await admin
     .from('healthcare_locations')
-    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified')
+    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
     .ilike('name', name)
     .limit(20)
 
@@ -132,7 +143,15 @@ export async function findOrCreateLocation(
     if (match.latitude == null && input.latitude != null && input.longitude != null) {
       await admin
         .from('healthcare_locations')
-        .update({ latitude: input.latitude, longitude: input.longitude, updated_at: new Date().toISOString() })
+        .update({
+          latitude: input.latitude,
+          longitude: input.longitude,
+          formatted_address: input.formattedAddress?.trim() || null,
+          google_maps_url: input.googleMapsUrl?.trim() || null,
+          location_source: input.source ?? 'map_picker',
+          is_verified: true,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', match.id)
       match.latitude = input.latitude
       match.longitude = input.longitude
@@ -164,11 +183,15 @@ export async function findOrCreateLocation(
       latitude,
       longitude,
       phone: input.phone?.trim() || null,
-      // A doctor placing their own pin counts as verified; a guessed one does not.
+      formatted_address: input.formattedAddress?.trim() || null,
+      google_maps_url: input.googleMapsUrl?.trim() || null,
+      location_source: input.source ?? (geocoded ? 'address_search' : 'map_picker'),
+      // A pin the doctor placed or confirmed counts as verified; one we guessed
+      // from an address string does not.
       is_verified: !geocoded && latitude != null,
       created_by: input.createdBy ?? null,
     })
-    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified')
+    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
     .single()
 
   if (error) {
@@ -177,7 +200,7 @@ export async function findOrCreateLocation(
     if (error.code === '23505') {
       const { data: raced } = await admin
         .from('healthcare_locations')
-        .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified')
+        .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
         .ilike('name', name)
         .limit(20)
       const found = (raced ?? []).find(

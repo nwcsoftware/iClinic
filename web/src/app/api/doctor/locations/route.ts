@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSubscribedDoctor } from '@/lib/doctor-auth'
-import { findOrCreateLocation, LOCATION_TYPES, type LocationType } from '@/lib/locations'
+import { findOrCreateLocation, LOCATION_TYPES, LOCATION_SOURCES, type LocationType, type LocationSource } from '@/lib/locations'
 
 // GET    /api/doctor/locations        — the doctor's workplaces
 // POST   /api/doctor/locations        — add one (creates or reuses the place)
@@ -14,7 +14,7 @@ import { findOrCreateLocation, LOCATION_TYPES, type LocationType } from '@/lib/l
 
 const SELECT = `
   id, working_days, working_hours, appointment_duration, phone_number, notes, is_primary,
-  healthcare_locations ( id, name, type, address, city, governorate, latitude, longitude, phone, is_verified )
+  healthcare_locations ( id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source )
 `
 
 export async function GET(request: Request) {
@@ -74,6 +74,11 @@ export async function POST(request: Request) {
       longitude: lng,
       phone: str(body.phone),
       createdBy: doctor.id,
+      formattedAddress: str(body.formatted_address),
+      googleMapsUrl: str(body.google_maps_url),
+      source: (LOCATION_SOURCES as readonly string[]).includes(body.location_source)
+        ? (body.location_source as LocationSource)
+        : null,
     })
 
     const { error } = await admin.from('doctor_locations').upsert({
