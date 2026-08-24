@@ -52,6 +52,29 @@ export const GOVERNORATES = [
   'Beirut', 'Mount Lebanon', 'North', 'Akkar', 'Bekaa', 'Baalbek-Hermel', 'South', 'Nabatieh',
 ] as const
 
+
+// ---------------------------------------------------------------------------
+// Migration 0010 adds the provenance columns (formatted_address,
+// google_maps_url, location_source). Until it is applied, PostgREST answers any
+// request that names them with 42703 / PGRST204. Rather than let that take out
+// workplace listing, every read and write here falls back to the columns that
+// have always existed, and remembers so it only pays for the discovery once.
+// ---------------------------------------------------------------------------
+const BASE_COLS = 'id, name, type, address, city, governorate, latitude, longitude, phone, is_verified'
+const FULL_COLS = `${BASE_COLS}, formatted_address, google_maps_url, location_source`
+
+let provenanceReady = true
+function missingColumn(error: { code?: string | null } | null | undefined): boolean {
+  return error?.code === '42703' || error?.code === 'PGRST204'
+}
+export function locationColumns(): string {
+  return provenanceReady ? FULL_COLS : BASE_COLS
+}
+function withoutProvenance<T extends Record<string, unknown>>(row: T): T {
+  const { formatted_address: _a, google_maps_url: _b, location_source: _c, ...rest } = row
+  return rest as T
+}
+
 // ---------------------------------------------------------------------------
 // Geocoding via OpenStreetMap Nominatim: free, no key, and its usage policy
 // requires an identifying User-Agent, which is set below.
@@ -128,35 +151,49 @@ export async function findOrCreateLocation(
   const key = normaliseKey(name, city)
 
   // Match on the same normalised key the unique index uses.
-  const { data: existing } = await admin
-    .from('healthcare_locations')
-    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
-    .ilike('name', name)
-    .limit(20)
+  // Selecting a column list built at runtime costs the generated row types, so
+  // the shape is asserted once here rather than at every use site.
+  const lookup = async () => {
+    const { data, error } = await admin
+      .from('healthcare_locations')
+      .select(locationColumns())
+      .ilike('name', name)
+      .limit(20)
+    return { rows: (data ?? []) as unknown as HealthcareLocation[], error }
+  }
 
-  const match = (existing ?? []).find(
-    (l) => normaliseKey(l.name as string, l.city as string | null) === key,
-  )
+  let { rows: existing, error: lookupError } = await lookup()
+  if (missingColumn(lookupError)) {
+    provenanceReady = false
+    ;({ rows: existing } = await lookup())
+  }
+
+  const match = existing.find((l) => normaliseKey(l.name, l.city) === key)
   if (match) {
     // Fill in coordinates on a row that never had them, but never overwrite
     // a pin someone has already placed.
     if (match.latitude == null && input.latitude != null && input.longitude != null) {
-      await admin
-        .from('healthcare_locations')
-        .update({
-          latitude: input.latitude,
-          longitude: input.longitude,
-          formatted_address: input.formattedAddress?.trim() || null,
-          google_maps_url: input.googleMapsUrl?.trim() || null,
-          location_source: input.source ?? 'map_picker',
-          is_verified: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', match.id)
+      const patch = {
+        latitude: input.latitude,
+        longitude: input.longitude,
+        formatted_address: input.formattedAddress?.trim() || null,
+        google_maps_url: input.googleMapsUrl?.trim() || null,
+        location_source: input.source ?? 'map_picker',
+        is_verified: true,
+        updated_at: new Date().toISOString(),
+      }
+      const patchRow = provenanceReady ? patch : withoutProvenance(patch)
+      const { error: patchError } = await admin
+        .from('healthcare_locations').update(patchRow).eq('id', match.id)
+      if (missingColumn(patchError)) {
+        provenanceReady = false
+        await admin
+          .from('healthcare_locations').update(withoutProvenance(patch)).eq('id', match.id)
+      }
       match.latitude = input.latitude
       match.longitude = input.longitude
     }
-    return { location: match as HealthcareLocation, reused: true, geocoded: false }
+    return { location: match, reused: true, geocoded: false }
   }
 
   let latitude = input.latitude ?? null
@@ -172,9 +209,7 @@ export async function findOrCreateLocation(
     }
   }
 
-  const { data: created, error } = await admin
-    .from('healthcare_locations')
-    .insert({
+  const row = {
       name,
       type: input.type,
       address: input.address?.trim() || null,
@@ -190,26 +225,34 @@ export async function findOrCreateLocation(
       // from an address string does not.
       is_verified: !geocoded && latitude != null,
       created_by: input.createdBy ?? null,
-    })
-    .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
-    .single()
+  }
+
+  const insert = async () => {
+    const { data, error } = await admin
+      .from('healthcare_locations')
+      .insert(provenanceReady ? row : withoutProvenance(row))
+      .select(locationColumns())
+      .single()
+    return { created: (data as unknown as HealthcareLocation | null), error }
+  }
+
+  let { created, error } = await insert()
+  if (missingColumn(error)) {
+    provenanceReady = false
+    ;({ created, error } = await insert())
+  }
 
   if (error) {
     // 23505: another request created the same place a moment ago. Read it back
     // rather than failing — the point is one row, not who won the race.
     if (error.code === '23505') {
-      const { data: raced } = await admin
-        .from('healthcare_locations')
-        .select('id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source')
-        .ilike('name', name)
-        .limit(20)
-      const found = (raced ?? []).find(
-        (l) => normaliseKey(l.name as string, l.city as string | null) === key,
-      )
-      if (found) return { location: found as HealthcareLocation, reused: true, geocoded: false }
+      const { rows: raced } = await lookup()
+      const found = raced.find((l) => normaliseKey(l.name, l.city) === key)
+      if (found) return { location: found, reused: true, geocoded: false }
     }
     throw new Error(error.message)
   }
 
-  return { location: created as HealthcareLocation, reused: false, geocoded }
+  if (!created) throw new Error('Could not save that location')
+  return { location: created, reused: false, geocoded }
 }

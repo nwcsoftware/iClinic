@@ -100,6 +100,43 @@ export async function getMyWorkplaces(): Promise<DoctorWorkplace[]> {
   return body.locations ?? []
 }
 
+export type LocationSource =
+  | 'google_maps_link' | 'current_location' | 'map_picker' | 'address_search' | 'admin'
+
+export type ResolvedLocation = {
+  resolved: boolean
+  latitude?: number
+  longitude?: number
+  name?: string | null
+  formatted_address?: string | null
+  city?: string | null
+  governorate?: string | null
+  google_maps_url?: string | null
+  location_source?: LocationSource
+  // 'approximate' means the position came from a map camera or an address
+  // match rather than the place's own marker — the doctor should check it.
+  precision?: 'exact' | 'approximate'
+  outside_lebanon?: boolean
+  reason?: string
+}
+
+// Turns a pasted link, a GPS fix, a dropped pin or an address into a position
+// the doctor can confirm. Resolving never writes anything.
+export async function resolveLocation(
+  input:
+    | { mode: 'google_maps_link'; url: string }
+    | { mode: 'current_location'; latitude: number; longitude: number }
+    | { mode: 'map_picker'; latitude: number; longitude: number }
+    | { mode: 'address_search'; query: string },
+): Promise<ResolvedLocation> {
+  const res = await fetch(`${API_URL}/api/doctor/locations/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
+  })
+  return jsonOrThrow(res)
+}
+
 export async function addWorkplace(input: {
   name: string
   type: LocationType
@@ -113,6 +150,9 @@ export async function addWorkplace(input: {
   appointment_duration?: number | null
   notes?: string
   is_primary?: boolean
+  formatted_address?: string | null
+  google_maps_url?: string | null
+  location_source?: LocationSource | null
 }): Promise<{ reused: boolean; geocoded: boolean; needs_pin: boolean }> {
   const res = await fetch(`${API_URL}/api/doctor/locations`, {
     method: 'POST',

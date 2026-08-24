@@ -44,3 +44,6 @@ next-env.d.ts
 .env*
 # keep the env template, like mobile/.env.example
 !.env.example
+
+.vercel
+.env*

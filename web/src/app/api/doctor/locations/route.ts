@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSubscribedDoctor } from '@/lib/doctor-auth'
-import { findOrCreateLocation, LOCATION_TYPES, LOCATION_SOURCES, type LocationType, type LocationSource } from '@/lib/locations'
+import { findOrCreateLocation, locationColumns, LOCATION_TYPES, LOCATION_SOURCES, type LocationType, type LocationSource } from '@/lib/locations'
 
 // GET    /api/doctor/locations        — the doctor's workplaces
 // POST   /api/doctor/locations        — add one (creates or reuses the place)
@@ -12,10 +12,8 @@ import { findOrCreateLocation, LOCATION_TYPES, LOCATION_SOURCES, type LocationTy
 // matches on a normalised name+city, so several doctors at Saint George all
 // attach to the same row and the map shows one marker.
 
-const SELECT = `
-  id, working_days, working_hours, appointment_duration, phone_number, notes, is_primary,
-  healthcare_locations ( id, name, type, address, city, governorate, latitude, longitude, phone, is_verified, formatted_address, google_maps_url, location_source )
-`
+const OWN = 'id, working_days, working_hours, appointment_duration, phone_number, notes, is_primary'
+const select = () => `${OWN}, healthcare_locations ( ${locationColumns()} )`
 
 export async function GET(request: Request) {
   try {
@@ -27,12 +25,18 @@ export async function GET(request: Request) {
         : NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await admin
+    const read = async () => admin
       .from('doctor_locations')
-      .select(SELECT)
+      .select(select())
       .eq('doctor_id', doctor.id)
       .order('is_primary', { ascending: false })
 
+    let { data, error } = await read()
+    // Migration 0010 not applied: retry without the provenance columns so the
+    // doctor still sees the workplaces they already have.
+    if (error?.code === '42703' || error?.code === 'PGRST204') {
+      ;({ data, error } = await read())
+    }
     // Migration 0009 not applied yet — degrade instead of breaking the app.
     if (error) return NextResponse.json({ locations: [], enabled: false })
 

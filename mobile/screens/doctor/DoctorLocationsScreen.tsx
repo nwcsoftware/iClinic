@@ -12,6 +12,7 @@ import {
 import { colors, radius, shadow, type } from '../../lib/theme'
 import { Card, EmptyState, TopBar } from '../../components/ui'
 import { FadeInUp } from '../../components/motion'
+import LocationPicker, { type ConfirmedLocation } from '../../components/map/LocationPicker'
 
 const DAYS = [
   { n: 1, label: 'Mon' }, { n: 2, label: 'Tue' }, { n: 3, label: 'Wed' },
@@ -192,36 +193,54 @@ function AddWorkplaceForm({
 }) {
   const [name, setName] = useState('')
   const [placeType, setPlaceType] = useState<LocationType>('hospital')
-  const [address, setAddress] = useState('')
-  const [city, setCity] = useState('')
   const [saving, setSaving] = useState(false)
+  const [picking, setPicking] = useState(false)
+  const [place, setPlace] = useState<ConfirmedLocation | null>(null)
+
+  // A confirmed pin can fill in the name when the doctor has not typed one —
+  // Google and OSM usually know what the building is called.
+  function accept(loc: ConfirmedLocation) {
+    setPlace(loc)
+    setPicking(false)
+    if (!name.trim() && loc.name) setName(loc.name)
+  }
 
   async function submit() {
     if (!name.trim()) { onError('What is the place called?'); return }
+    if (!place) { onError('Set the location so patients can find it.'); return }
     setSaving(true)
     onError('')
     try {
       const res = await addWorkplace({
         name: name.trim(),
         type: placeType,
-        address: address.trim() || undefined,
-        city: city.trim() || undefined,
+        city: place.city ?? undefined,
+        governorate: place.governorate ?? undefined,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        formatted_address: place.formatted_address,
+        google_maps_url: place.google_maps_url,
+        location_source: place.location_source,
       })
-      // Say plainly what happened — being attached to an existing hospital is
-      // correct behaviour, but it is surprising if it happens silently.
       const msg = res.reused
         ? 'Linked you to this place, which was already on the map.'
-        : res.needs_pin
-          ? 'Added. We could not find its coordinates, so it is not on the map yet.'
-          : res.geocoded
-            ? 'Added and placed on the map from the address.'
-            : 'Added to your workplaces.'
+        : 'Added to your workplaces and placed on the map.'
       onAdded(msg)
     } catch (e) {
       onError(e instanceof Error ? e.message : 'Could not add that place')
     } finally {
       setSaving(false)
     }
+  }
+
+  if (picking) {
+    return (
+      <FadeInUp>
+        <View style={{ marginBottom: 18 }}>
+          <LocationPicker onConfirm={accept} onCancel={() => setPicking(false)} />
+        </View>
+      </FadeInUp>
+    )
   }
 
   return (
@@ -244,34 +263,38 @@ function AddWorkplaceForm({
             const on = t.key === placeType
             return (
               <Pressable key={t.key} onPress={() => setPlaceType(t.key)} style={[styles.chip, on && styles.chipOn]}>
-                <MaterialCommunityIcons
-                  name={t.icon as never} size={14} color={on ? '#fff' : colors.doc}
-                />
+                <MaterialCommunityIcons name={t.icon as never} size={14} color={on ? '#fff' : colors.doc} />
                 <Text style={[styles.chipText, on && { color: '#fff' }]}>{t.label}</Text>
               </Pressable>
             )
           })}
         </View>
 
-        <Text style={[type.label, { marginTop: 14, marginBottom: 7 }]}>Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Street and area"
-          placeholderTextColor={colors.textFaint}
-          value={address}
-          onChangeText={setAddress}
-        />
-
-        <Text style={[type.label, { marginTop: 14, marginBottom: 7 }]}>City</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Beirut"
-          placeholderTextColor={colors.textFaint}
-          value={city}
-          onChangeText={setCity}
-        />
+        <Text style={[type.label, { marginTop: 14, marginBottom: 7 }]}>Location</Text>
+        {place ? (
+          <Pressable onPress={() => setPicking(true)} style={styles.placeSet}>
+            <View style={styles.placeIcon}>
+              <Feather name="check" size={15} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.ink }} numberOfLines={2}>
+                {place.formatted_address ?? 'Pin placed'}
+              </Text>
+              <Text style={[type.small, { marginTop: 1 }]}>
+                {place.latitude.toFixed(5)}, {place.longitude.toFixed(5)} · tap to change
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => setPicking(true)} style={styles.placeEmpty}>
+            <MaterialCommunityIcons name="map-marker-plus-outline" size={19} color={colors.doc} />
+            <Text style={styles.placeEmptyText}>Set the exact location</Text>
+            <Feather name="chevron-right" size={17} color={colors.textFaint} />
+          </Pressable>
+        )}
         <Text style={[type.small, { marginTop: 6 }]}>
-          We use the address to place it on the map. If it is already there, you will be linked to it.
+          Paste a Google Maps link, use your current position, or drop a pin. This is what patient
+          directions will point at.
         </Text>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
@@ -288,6 +311,21 @@ function AddWorkplaceForm({
 }
 
 const styles = StyleSheet.create({
+  placeEmpty: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: colors.docSoft, borderRadius: radius.md,
+    paddingVertical: 14, paddingHorizontal: 14, backgroundColor: colors.docSofter,
+  },
+  placeEmptyText: { flex: 1, color: colors.doc, fontWeight: '800', fontSize: 14.5 },
+  placeSet: {
+    flexDirection: 'row', alignItems: 'center', gap: 11,
+    borderWidth: 1.5, borderColor: colors.docSoft, borderRadius: radius.md,
+    padding: 12, backgroundColor: colors.card,
+  },
+  placeIcon: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.success,
+    alignItems: 'center', justifyContent: 'center',
+  },
   icon: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: colors.docSoft,
     alignItems: 'center', justifyContent: 'center',
