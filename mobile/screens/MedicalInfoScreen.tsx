@@ -9,6 +9,7 @@ import { colors, radius, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
 import { PrimaryButton, TopBar } from '../components/ui'
 import { FadeInUp } from '../components/motion'
+import SurgicalHistorySection from '../components/SurgicalHistorySection'
 
 // A list of short free-text labels the patient adds one at a time.
 function ChipList({
@@ -175,17 +176,7 @@ export default function MedicalInfoScreen({
         </FadeInUp>
 
         <FadeInUp delay={210}>
-          <View style={styles.card}>
-            <Text style={type.h2}>{t('medical.notes')}</Text>
-            <TextInput
-              style={styles.notes}
-              placeholder={t('medical.notesPlaceholder')}
-              placeholderTextColor={colors.textFaint}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
-          </View>
+          <SurgicalHistorySection />
         </FadeInUp>
 
         {error ? (

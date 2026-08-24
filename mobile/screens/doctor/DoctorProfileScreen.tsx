@@ -9,11 +9,12 @@ import { DoctorAmbient, FadeInUp } from '../../components/motion'
 import { getSubscription, type DoctorMe, type Access } from '../../lib/doctorApi'
 
 export default function DoctorProfileScreen({
-  doctor, onSignedOut, onOpenBilling,
+  doctor, onSignedOut, onOpenBilling, onOpenWorkplaces,
 }: {
   doctor: DoctorMe
   onSignedOut: () => void
   onOpenBilling: () => void
+  onOpenWorkplaces: () => void
 }) {
   const insets = useSafeAreaInsets()
   const [access, setAccess] = useState<Access | null>(null)
@@ -70,6 +71,23 @@ export default function DoctorProfileScreen({
             </Card>
           </FadeInUp>
         ) : null}
+
+        <FadeInUp delay={75}>
+          <Card style={{ marginBottom: 16 }} onPress={onOpenWorkplaces}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={styles.subIcon}>
+                <Feather name="map-pin" size={16} color={colors.doc} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={type.h2}>My workplaces</Text>
+                <Text style={[type.sub, { marginTop: 2 }]}>
+                  Hospitals and clinics you work at
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.textFaint} />
+            </View>
+          </Card>
+        </FadeInUp>
 
         <FadeInUp delay={80}>
           <Card style={{ marginBottom: 16 }} onPress={onOpenBilling}>

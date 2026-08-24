@@ -176,10 +176,23 @@ export type PatientDetail = {
   }
   medical_enabled: boolean
   visits: {
-    id: string; appointment_date: string; start_time: string; status: string
-    reason: string | null; notes: string | null; is_past: boolean
+    id: string; appointment_date: string; start_time: string; end_time: string | null
+    status: string; reason: string | null; is_past: boolean
+    location: { name: string; type: string; city: string | null } | null
+    // False when another doctor wrote the consultation: the visit is visible,
+    // their clinical notes are not.
+    mine: boolean
+    diagnosis: string | null; treatment: string | null
+    doctor_notes: string | null; follow_up: string | null; notes: string | null
   }[]
-  stats: { total_visits: number; first_visit: string | null; last_visit: string | null }
+  surgeries: {
+    id: string; procedure_name: string; surgery_date: string | null
+    hospital_or_clinic: string | null; surgeon_name: string | null; notes: string | null
+  }[]
+  stats: {
+    total_visits: number; first_visit: string | null; last_visit: string | null
+    completed_visits: number; common_reason: string | null
+  }
   prescriptions: {
     id: string; created_at: string; appointment_id: string | null
     diagnosis_note: string | null; notes: string | null

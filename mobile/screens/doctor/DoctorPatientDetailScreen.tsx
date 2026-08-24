@@ -8,6 +8,7 @@ import { getPatientDetail, type PatientDetail, type RxItem } from '../../lib/doc
 import { colors, radius, statusColors, type } from '../../lib/theme'
 import { Avatar, Badge, Card, TopBar } from '../../components/ui'
 import { FadeInUp } from '../../components/motion'
+import PatientMedicalTimeline from '../../components/doctor/PatientMedicalTimeline'
 
 function age(dob: string | null): string | null {
   if (!dob) return null
@@ -115,6 +116,24 @@ export default function DoctorPatientDetailScreen({
           </View>
         </FadeInUp>
 
+        {/* At-a-glance history */}
+        <FadeInUp delay={40}>
+          <View style={styles.summaryRow}>
+            <Stat label="Visits" value={String(data.stats.total_visits)} />
+            <Stat label="Completed" value={String(data.stats.completed_visits)} />
+            <Stat label="First seen" value={shortDate(data.stats.first_visit)} />
+            <Stat label="Last seen" value={shortDate(data.stats.last_visit)} />
+          </View>
+          {data.stats.common_reason ? (
+            <View style={styles.commonRow}>
+              <Feather name="repeat" size={13} color={colors.doc} />
+              <Text style={[type.sub, { flex: 1 }]}>
+                Most often here for <Text style={{ fontWeight: '800', color: colors.ink }}>{data.stats.common_reason}</Text>
+              </Text>
+            </View>
+          ) : null}
+        </FadeInUp>
+
         {/* Medical alerts first — this is the part that changes prescribing */}
         <FadeInUp delay={60}>
           <Card style={{ marginBottom: 14 }}>
@@ -141,6 +160,31 @@ export default function DoctorPatientDetailScreen({
           </Card>
         </FadeInUp>
 
+        {/* Surgical history */}
+        {data.surgeries.length > 0 ? (
+          <FadeInUp delay={90}>
+            <Card style={{ marginBottom: 14 }}>
+              <Text style={type.h2}>Surgical history</Text>
+              <View style={{ marginTop: 10, gap: 8 }}>
+                {data.surgeries.map((sg) => (
+                  <View key={sg.id} style={{ flexDirection: 'row', gap: 9 }}>
+                    <Feather name="activity" size={14} color={colors.doc} style={{ marginTop: 3 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14.5, fontWeight: '700', color: colors.ink }}>
+                        {sg.procedure_name}
+                      </Text>
+                      <Text style={[type.sub, { marginTop: 1 }]}>
+                        {[sg.surgery_date ? sg.surgery_date.slice(0, 4) : null, sg.hospital_or_clinic]
+                          .filter(Boolean).join(' · ') || 'No date given'}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </Card>
+          </FadeInUp>
+        ) : null}
+
         {/* Current medication */}
         {data.prescriptions.length > 0 ? (
           <FadeInUp delay={110}>
@@ -161,43 +205,54 @@ export default function DoctorPatientDetailScreen({
           </FadeInUp>
         ) : null}
 
-        {/* Visits */}
+        {/* Consultation timeline */}
         <FadeInUp delay={160}>
           <Text style={[type.h2, { marginTop: 12, marginBottom: 4 }]}>
-            Visits with you ({data.stats.total_visits})
+            Consultation history
           </Text>
-          <Text style={[type.sub, { marginBottom: 12 }]}>
-            First {longDate(data.stats.first_visit)} · Last {longDate(data.stats.last_visit)}
+          <Text style={[type.sub, { marginBottom: 14 }]}>
+            {data.stats.total_visits} visit{data.stats.total_visits === 1 ? '' : 's'} with you
           </Text>
-          {data.visits.map((v) => {
-            const sc = statusColors[v.status] ?? statusColors.scheduled
-            return (
-              <Card key={v.id} style={{ marginBottom: 10 }}
-                onPress={v.is_past ? () => onPrescribe({
-                  id: v.id, patient_name: p.full_name,
-                  appointment_date: v.appointment_date, start_time: v.start_time,
-                }) : undefined}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={styles.dateBox}>
-                    <Text style={styles.dateText}>{longDate(v.appointment_date)}</Text>
-                    <Text style={styles.timeText}>{v.start_time.slice(0, 5)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Badge label={sc.label} bg={sc.bg} fg={sc.fg} />
-                    {v.reason ? <Text style={[type.sub, { marginTop: 5 }]} numberOfLines={2}>{v.reason}</Text> : null}
-                  </View>
-                  {v.is_past ? <Feather name="edit-3" size={16} color={colors.doc} /> : null}
-                </View>
-              </Card>
-            )
-          })}
+          <PatientMedicalTimeline visits={data.visits} />
+
+          {data.visits.some((v) => v.is_past) ? (
+            <Text style={[type.small, { marginTop: 6, marginBottom: 10 }]}>
+              Tap a finished visit from My visits to record or update its notes.
+            </Text>
+          ) : null}
         </FadeInUp>
       </ScrollView>
     </View>
   )
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  )
+}
+
+function shortDate(d: string | null): string {
+  if (!d) return '—'
+  return new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+}
+
 const styles = StyleSheet.create({
+  summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  stat: {
+    flex: 1, backgroundColor: colors.card, borderRadius: radius.md, paddingVertical: 12,
+    paddingHorizontal: 8, alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  statValue: { fontSize: 16, fontWeight: '800', color: colors.doc },
+  statLabel: { fontSize: 10.5, fontWeight: '600', color: colors.textMuted, marginTop: 2 },
+  commonRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14,
+    backgroundColor: colors.docSofter, borderRadius: radius.md, padding: 11,
+  },
   contactBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 16,
     borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.docSoft, backgroundColor: colors.card,

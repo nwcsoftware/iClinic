@@ -31,6 +31,7 @@ import DoctorScheduleScreen from './screens/doctor/DoctorScheduleScreen'
 import DoctorPatientsScreen from './screens/doctor/DoctorPatientsScreen'
 import DoctorProfileScreen from './screens/doctor/DoctorProfileScreen'
 import DoctorBillingScreen from './screens/doctor/DoctorBillingScreen'
+import DoctorLocationsScreen from './screens/doctor/DoctorLocationsScreen'
 import PaywallScreen from './screens/doctor/PaywallScreen'
 import EmergencyButton from './components/EmergencyButton'
 import FloatingMapNavButton from './components/FloatingMapNavButton'
@@ -52,6 +53,7 @@ type DoctorOverlay =
   | { kind: 'patient'; id: string }
   | { kind: 'visits' }
   | { kind: 'prescribe'; visit: PrescribeTarget }
+  | { kind: 'workplaces' }
   | null
 // 'landing' is what a signed-out visitor sees first: what the product is, what
 // it costs, and the policies. 'auth' is one tap away from it.
@@ -277,6 +279,9 @@ function Main() {
     if (docOverlay?.kind === 'billing') {
       return <DoctorBillingScreen onBack={() => setDocOverlay(null)} />
     }
+    if (docOverlay?.kind === 'workplaces') {
+      return <DoctorLocationsScreen onBack={() => setDocOverlay(null)} />
+    }
     if (docOverlay?.kind === 'patient') {
       return (
         <DoctorPatientDetailScreen
@@ -321,6 +326,7 @@ function Main() {
               doctor={doctorMe}
               onSignedOut={() => setPhase('landing')}
               onOpenBilling={() => setDocOverlay({ kind: 'billing' })}
+              onOpenWorkplaces={() => setDocOverlay({ kind: 'workplaces' })}
             />
           )}
         </View>

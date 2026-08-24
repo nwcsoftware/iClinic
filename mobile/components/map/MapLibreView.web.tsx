@@ -182,7 +182,10 @@ export default function MapLibreView({
   const map = useRef<MapInstance | null>(null)
   const markers = useRef<Map<string, MarkerInstance>>(new Map())
   const [error, setError] = useState('')
+  // "The map object exists" — enough to attach markers.
   const [ready, setReady] = useState(false)
+  // "Tiles are actually painted" — only controls the loading shimmer.
+  const [painted, setPainted] = useState(false)
 
   // Keep the latest handler without re-creating the map.
   const onSelectRef = useRef(onSelect)
@@ -207,12 +210,23 @@ export default function MapLibreView({
         })
         map.current = m
 
-        m.on('load', () => {
-          if (cancelled) return
+        // Markers are DOM overlays, so they can attach the moment the map
+        // object exists. Gating them on 'load' meant one failed sprite or
+        // glyph fetch in the basemap left the map permanently empty.
+        setReady(true)
+        onReady?.()
+
+        // Restyling does need the style, so it waits — and 'styledata' covers
+        // the case where 'load' never fires because a sub-resource 404s.
+        let styled = false
+        const restyle = () => {
+          if (cancelled || styled) return
+          styled = true
           applyBrandStyle(m)
-          setReady(true)
-          onReady?.()
-        })
+        }
+        m.on('load', restyle)
+        m.on('styledata', restyle)
+        m.on('idle', () => { if (!cancelled) setPainted(true) })
         // Tapping empty map closes whatever sheet is open.
         m.on('click', () => onSelectRef.current(null))
       })
@@ -292,7 +306,7 @@ export default function MapLibreView({
   return (
     <div style={{ position: 'absolute', inset: 0, background: colors.bg }}>
       <div ref={container} style={{ position: 'absolute', inset: 0 }} />
-      {!ready ? <MapSkeleton /> : null}
+      {!painted ? <MapSkeleton /> : null}
     </div>
   )
 }
