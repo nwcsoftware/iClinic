@@ -102,53 +102,75 @@ function applyBrandStyle(map: MapInstance) {
   }
 }
 
-// Marker DOM. Built by hand rather than with an image so it can carry CSS
-// transitions, a pulse, and a selected state.
-function markerElement(loc: MapLocation, selected: boolean): HTMLElement {
+// ---------------------------------------------------------------------------
+// Markers.
+//
+// MapLibre positions the exact element passed to `new Marker({element})` by
+// writing its own `transform` on that element on every pan/zoom frame — that
+// element is not ours to style. The previous version replaced its whole
+// `style.cssText` on every selection change, which wiped MapLibre's transform
+// and left the pin sitting at (0,0) until the next camera move recalculated
+// it — the "floating during zoom" bug.
+//
+// The fix is structural: the root element we pass to Marker gets NOTHING but
+// class names, ever, from us — no inline style, before or after creation.
+// Everything visual (colour, size, the selected scale-up, the pulse) lives on
+// a child we fully own and is driven entirely by CSS classes, so there is
+// nothing left for a later update to clobber.
+// ---------------------------------------------------------------------------
+
+const PIN_W = 30
+const PIN_H = 37
+
+function pinSvg(hospital: boolean): string {
+  // One silhouette for every marker: a circular head merging into a pointed
+  // tip, anchor='bottom' below aligns that tip exactly on the coordinate.
+  // The triangle is drawn first and the head circle on top of it, so the
+  // circle's own stroke hides the triangle's top edge and only its two
+  // slanted sides remain visible — one continuous outline, no seam.
+  const icon = hospital
+    // Hospital: a bold filled cross — the one symbol that reads instantly at
+    // marker size, worldwide.
+    ? `<path class="icl-pin-icon" d="M13.4 8.6h3.2v3.8H20.4v3.2h-3.8v3.8h-3.2v-3.8H9.6v-3.2h3.8z" fill="#fff"/>`
+    // Clinic: a simple ring — deliberately quieter than the hospital cross.
+    : `<circle class="icl-pin-icon" cx="15" cy="13.5" r="4.2" fill="none" stroke="#fff" stroke-width="2.4"/>`
+
+  return `
+    <svg width="${PIN_W}" height="${PIN_H}" viewBox="0 0 30 37" fill="none">
+      <path class="icl-pin-fill icl-pin-stroke" d="M8 20 L15 35 L22 20 Z" stroke-width="2" stroke-linejoin="round"/>
+      <circle class="icl-pin-fill icl-pin-stroke" cx="15" cy="13.5" r="11.5" stroke-width="2"/>
+      ${icon}
+    </svg>`
+}
+
+// Built once per location; after that only classList and the badge text ever
+// change — see the note above for why.
+function buildMarkerElement(loc: MapLocation): HTMLElement {
   const hospital = loc.type === 'hospital'
-  const accent = hospital ? colors.brand : '#0F766E'
+  const hasDoctors = loc.doctor_count > 0
 
   const el = document.createElement('div')
-  el.style.cssText = `
-    position:relative;width:${selected ? 46 : 38}px;height:${selected ? 46 : 38}px;
-    cursor:pointer;transition:width .22s cubic-bezier(.2,.9,.3,1),height .22s cubic-bezier(.2,.9,.3,1);
-  `
+  el.className = `icl-mk ${hospital ? 'type-hospital' : 'type-clinic'}`
 
-  if (loc.doctor_count > 0) {
-    const ring = document.createElement('div')
-    ring.style.cssText = `
-      position:absolute;inset:-6px;border-radius:50%;
-      border:2px solid ${accent};opacity:.35;
-      animation:iclinicPulse 2.4s ease-out infinite;
-    `
-    el.appendChild(ring)
+  const inner = document.createElement('div')
+  inner.className = 'icl-inner'
+  inner.innerHTML = pinSvg(hospital)
+
+  if (hasDoctors) {
+    const pulse = document.createElement('div')
+    pulse.className = 'icl-pulse'
+    inner.appendChild(pulse)
   }
 
-  const pin = document.createElement('div')
-  pin.style.cssText = `
-    position:absolute;inset:0;border-radius:50%;
-    background:${selected ? accent : '#FFFFFF'};
-    border:2.5px solid ${accent};
-    box-shadow:0 6px 18px rgba(16,28,61,${selected ? 0.34 : 0.18});
-    display:flex;align-items:center;justify-content:center;
-    transform:scale(${selected ? 1.06 : 1});
-    transition:transform .22s cubic-bezier(.2,.9,.3,1),background .22s ease;
-  `
-  pin.innerHTML = hospital
-    ? `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${selected ? '#fff' : accent}" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>`
-    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${selected ? '#fff' : accent}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>`
-  el.appendChild(pin)
+  el.appendChild(inner)
 
-  if (loc.doctor_count > 0) {
+  if (hasDoctors) {
     const badge = document.createElement('div')
+    badge.className = 'icl-badge'
     badge.textContent = String(loc.doctor_count)
-    badge.style.cssText = `
-      position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;
-      border-radius:9px;background:${accent};color:#fff;font:700 11px/18px -apple-system,Segoe UI,Roboto,sans-serif;
-      text-align:center;box-shadow:0 2px 6px rgba(16,28,61,.28);
-    `
     el.appendChild(badge)
   }
+
   return el
 }
 
@@ -158,12 +180,49 @@ function injectKeyframes() {
   style.id = 'iclinic-map-css'
   style.textContent = `
     @keyframes iclinicPulse {
-      0%   { transform: scale(.85); opacity:.45; }
-      70%  { transform: scale(1.5);  opacity:0;   }
-      100% { transform: scale(1.5);  opacity:0;   }
+      0%   { transform: scale(.7); opacity:.5; }
+      100% { transform: scale(1.9); opacity:0;   }
     }
     .maplibregl-ctrl-attrib { font-size:10px; opacity:.55; }
     .maplibregl-canvas { outline:none; }
+
+    /* The root marker element: MapLibre owns its position/transform. We only
+       ever touch its className, never its style, at any point. */
+    .icl-mk { cursor: pointer; }
+    .icl-mk.type-hospital { --icl-accent: ${colors.brand}; --icl-accent-dark: ${colors.brandDark}; }
+    .icl-mk.type-clinic   { --icl-accent: #0F766E; --icl-accent-dark: #0B5A54; }
+
+    .icl-mk .icl-inner {
+      position: relative;
+      width: ${PIN_W}px; height: ${PIN_H}px;
+      /* Scaling from the tip (bottom-centre) means the point never drifts
+         off the coordinate when a marker grows on selection. */
+      transform-origin: 50% 100%;
+      transition: transform .2s cubic-bezier(.2,.9,.3,1);
+      filter: drop-shadow(0 3px 8px rgba(16,28,61,.30));
+    }
+    .icl-mk.sel .icl-inner { transform: scale(1.14); }
+
+    .icl-mk .icl-pin-fill { fill: var(--icl-accent); }
+    .icl-mk .icl-pin-stroke { stroke: #fff; }
+    .icl-mk.sel .icl-pin-fill { fill: var(--icl-accent-dark); }
+
+    .icl-mk .icl-pulse {
+      position: absolute; left: 15px; top: 13.5px; width: 23px; height: 23px;
+      margin-left: -11.5px; margin-top: -11.5px; border-radius: 50%;
+      border: 2px solid var(--icl-accent);
+      animation: iclinicPulse 2.2s ease-out infinite;
+      pointer-events: none;
+    }
+    .icl-mk.sel .icl-pulse { display: none; }
+
+    .icl-mk .icl-badge {
+      position: absolute; top: -3px; right: -1px;
+      min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
+      background: var(--icl-accent-dark); color: #fff;
+      font: 700 10.5px/17px -apple-system,Segoe UI,Roboto,sans-serif;
+      text-align: center; box-shadow: 0 2px 5px rgba(16,28,61,.32);
+    }
   `
   document.head.appendChild(style)
 }
@@ -256,19 +315,21 @@ export default function MapLibreView({
       const existing = markers.current.get(loc.id)
       const isSelected = loc.id === selectedId
       if (existing) {
-        // Rebuild only the element that changed state, not the marker.
-        const fresh = markerElement(loc, isSelected)
-        const el = existing.getElement()
-        el.replaceChildren(...Array.from(fresh.childNodes))
-        el.style.cssText = fresh.style.cssText
+        // Only the selected state ever changes after creation, and it is a
+        // class toggle — never touch this element's `style` (see the note
+        // above `pinSvg`), or MapLibre's own positioning gets wiped.
+        existing.getElement().classList.toggle('sel', isSelected)
         continue
       }
-      const el = markerElement(loc, isSelected)
+      const el = buildMarkerElement(loc)
+      el.classList.toggle('sel', isSelected)
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
         onSelectRef.current(loc)
       })
-      const mk = new maplibregl.Marker({ element: el, anchor: 'center' })
+      // 'bottom': the pin's point, not its centre, sits on the coordinate —
+      // what makes a map pin read as anchored rather than floating above it.
+      const mk = new maplibregl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([loc.longitude, loc.latitude])
         .addTo(m)
       markers.current.set(loc.id, mk)
