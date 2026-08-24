@@ -128,3 +128,58 @@
     @apply font-sans;
   }
 }
+/* ---------------------------------------------------------------------------
+   Landing page
+   Motion here is hand-written rather than pulled from a library: there are only
+   four effects on the page, and none of them justify shipping an animation
+   runtime to every visitor. Every one of them stops under prefers-reduced-
+   motion — the page must read the same standing still.
+   --------------------------------------------------------------------------- */
+
+/* Sections rise as they enter the viewport. Starts hidden only when JS is
+   there to reveal it — the .js-reveal class is added by the observer itself,
+   so with scripting off the content is simply visible. */
+.js-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 720ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.js-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Slow colour fields behind the hero. Large, blurred and low-contrast, so they
+   read as light rather than as shapes. */
+@keyframes icl-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(4%, -6%, 0) scale(1.12); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.icl-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  animation: icl-drift 26s ease-in-out infinite;
+}
+
+/* The dot at each city on the map. */
+@keyframes icl-ping {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%  { transform: scale(3.4); opacity: 0; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+.icl-ping { transform-box: fill-box; transform-origin: center; animation: icl-ping 3.2s ease-out infinite; }
+
+/* A trace of noise stops the large flat gradients from banding. */
+.icl-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal { opacity: 1; transform: none; transition: none; }
+  .icl-aurora, .icl-ping { animation: none; }
+  .icl-ping { opacity: 0; }
+}
