@@ -1,7 +1,28 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Vercel assigns every project a *.vercel.app address and there is no way to
+// remove it, so the old one is sent here instead: existing links keep working,
+// and there is exactly one address that is "the site".
+//
+// Only the production alias is matched. Preview deployments
+// (iclinic-<hash>-....vercel.app) keep serving themselves — checking a build
+// before it goes live is the entire point of them.
+const LEGACY_HOST = 'iclinic-web.vercel.app'
+const CANONICAL_HOST = 'app.iclinic.health'
+
 export async function proxy(request: NextRequest) {
+  // 308 rather than 302: it is permanent, and it preserves the method and body,
+  // so a webhook still pointed at the old host keeps working instead of having
+  // its POST quietly turned into a GET.
+  if (request.headers.get('host') === LEGACY_HOST) {
+    const url = new URL(request.url)
+    url.protocol = 'https:'
+    url.host = CANONICAL_HOST
+    url.port = ''
+    return NextResponse.redirect(url, 308)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

@@ -18,7 +18,7 @@ import { CONTACT, type Policy } from '../lib/policies'
 // turns from transparent to solid once the dark hero is behind it — the change
 // is there because white on white cannot be read, not for effect.
 
-const WEB_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://iclinic.health'
+const WEB_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://app.iclinic.health'
 
 const FEATURES: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; body: string }[] = [
   { icon: 'stethoscope', title: 'Describe how you feel', body: 'Say it in your own words. The assistant works out which speciality fits and points you there.' },

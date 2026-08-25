@@ -1,7 +1,23 @@
 {
   "redirects": [
-    { "source": "/terms", "destination": "https://iclinic.health/terms", "permanent": false },
-    { "source": "/privacy", "destination": "https://iclinic.health/privacy", "permanent": false },
-    { "source": "/refund-policy", "destination": "https://iclinic.health/refund-policy", "permanent": false }
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "iclinic-app.vercel.app" }],
+      "destination": "https://iclinic.health/:path*",
+      "permanent": true
+    },
+    { "source": "/terms", "destination": "https://app.iclinic.health/terms", "permanent": false },
+    { "source": "/privacy", "destination": "https://app.iclinic.health/privacy", "permanent": false },
+    { "source": "/refund-policy", "destination": "https://app.iclinic.health/refund-policy", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/_expo/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
   ]
 }

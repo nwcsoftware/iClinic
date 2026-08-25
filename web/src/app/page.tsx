@@ -85,7 +85,7 @@ const MAP_POINTS = [
   'Filter by speciality when you already know who you need',
 ]
 
-const PATIENT_APP_URL = 'https://app.iclinic.health'
+const PATIENT_APP_URL = 'https://iclinic.health'
 
 export default function HomePage() {
   return (

@@ -12,7 +12,7 @@ import { AmbientBackground, FadeInUp } from '../components/motion'
 
 // The policies are served by the web project, which is a different origin to
 // the app. Falls back to the production site when the API URL is unset.
-const WEB_ORIGIN = process.env.EXPO_PUBLIC_API_URL ?? 'https://iclinic.health'
+const WEB_ORIGIN = process.env.EXPO_PUBLIC_API_URL ?? 'https://app.iclinic.health'
 
 // Endless soft pulse ring behind the logo — the login page breathes.
 function LogoPulse() {
