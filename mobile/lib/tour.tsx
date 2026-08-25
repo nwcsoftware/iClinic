@@ -49,7 +49,58 @@ export async function markTourSeen(): Promise<void> {
 }
 
 // --- measurement -----------------------------------------------------------
-export type Rect = { x: number; y: number; width: number; height: number }
+export type Rect = {
+  x: number; y: number; width: number; height: number
+  /**
+   * The target's own corner radius, when it can be read. The cutout follows the
+   * control's real shape rather than a fixed corner, so a round button gets a
+   * round hole instead of a rounded square around it.
+   */
+  radius?: number
+}
+
+// Web only: the shape the target actually draws.
+//
+// A <TourTarget> wraps its child in a plain View, and that wrapper describes
+// layout, not paint. The map orb is the clear case: it overhangs its slot with
+// a negative margin, so the slot measures 58x32 while the button people see is
+// a 58x58 circle. Highlighting the slot produces a squashed rounded rectangle
+// over a round button.
+//
+// So when a descendant is big enough to BE the target and carries a corner
+// radius, its box and radius are used instead. The 60% floor keeps a small
+// round icon inside a large card from speaking for the card.
+type Shape = { x?: number; y?: number; width?: number; height?: number; radius?: number }
+
+function radiusOf(e: Element): number {
+  const cs = getComputedStyle(e)
+  const v = cs.borderTopLeftRadius
+  if (!v) return 0
+  if (v.endsWith('%')) {
+    const r = e.getBoundingClientRect()
+    return (parseFloat(v) / 100) * Math.min(r.width, r.height)
+  }
+  return parseFloat(v) || 0
+}
+
+function readShape(node: unknown, box: Rect): Shape {
+  const el = node as Element | null
+  if (!el || typeof (el as { querySelectorAll?: unknown }).querySelectorAll !== 'function') return {}
+
+  const own = radiusOf(el)
+  if (own > 0) return { radius: own }
+
+  const area = box.width * box.height
+  let best: { r: DOMRect; radius: number } | null = null
+  for (const child of Array.from(el.querySelectorAll('*'))) {
+    const r = child.getBoundingClientRect()
+    if (r.width * r.height < area * 0.6) continue
+    const rad = radiusOf(child)
+    if (rad > 0 && (!best || rad > best.radius)) best = { r, radius: rad }
+  }
+  if (!best) return {}
+  return { x: best.r.x, y: best.r.y, width: best.r.width, height: best.r.height, radius: best.radius }
+}
 
 type Registry = Map<string, View>
 
@@ -148,7 +199,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
         if (attempt < 12) setTimeout(() => measure(id, attempt + 1), 60)
         return
       }
-      setRect({ x, y, width, height })
+      const shape = readShape(node, { x, y, width, height })
+      setRect({
+        x: shape.x ?? x,
+        y: shape.y ?? y,
+        width: shape.width ?? width,
+        height: shape.height ?? height,
+        radius: shape.radius,
+      })
     })
   }, [])
 

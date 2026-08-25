@@ -12,7 +12,7 @@
 
 export const CONTACT = {
   legalName: 'Jad Chami',
-  email: 'jadchamy2001@gmail.com',
+  email: 'jadchamy@hotmail.com',
   phone: '+961 81 609 293',
   location: 'Lebanon',
   priceUsd: 9.99,

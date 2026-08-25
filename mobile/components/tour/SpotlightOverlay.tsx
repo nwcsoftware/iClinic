@@ -37,6 +37,19 @@ const EDGE = 14          // keep the bubble this far from the screen edge
 
 const isWeb = Platform.OS === 'web'
 
+/**
+ * Radius for the hole around a target.
+ *
+ * The halo grows the shape by PAD on every side, so the radius grows with it,
+ * keeping the cutout concentric with the control: a 58px circle stays a circle
+ * rather than becoming a rounded square. Falls back to a fixed corner when the
+ * target's own radius could not be read.
+ */
+function holeRadius(r: Rect): number {
+  const base = r.radius != null ? r.radius + PAD : CORNER
+  return Math.max(0, Math.min(base, (r.width + PAD * 2) / 2, (r.height + PAD * 2) / 2))
+}
+
 /** Rounded-rect path, wound the opposite way to the outer rect so it cuts a hole. */
 function holePath(w: number, h: number, r: Rect, radius: number) {
   const x1 = Math.max(0, r.x - PAD)
@@ -117,7 +130,7 @@ export default function SpotlightOverlay() {
           style={[
             StyleSheet.absoluteFill,
             styles.scrim,
-            { clipPath: `path(evenodd, '${holePath(width, height, rect, CORNER)}')`, transition } as ViewStyle,
+            { clipPath: `path(evenodd, '${holePath(width, height, rect, holeRadius(rect))}')`, transition } as ViewStyle,
           ]}
         />
         {panels}
@@ -154,6 +167,7 @@ export default function SpotlightOverlay() {
               top: Math.max(0, rect.y - PAD),
               width: Math.min(width, rect.width + PAD * 2),
               height: Math.min(height, rect.height + PAD * 2),
+              borderRadius: holeRadius(rect),
             },
             !reduceMotion && ({ transition: 'all 320ms cubic-bezier(0.22, 1, 0.36, 1)' } as ViewStyle),
           ]}

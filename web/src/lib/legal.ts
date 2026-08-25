@@ -12,7 +12,7 @@ export const org = {
   product: 'iClinic',
   /** The person or company legally providing the service. */
   legalName: process.env.LEGAL_NAME ?? '',
-  email: process.env.LEGAL_EMAIL ?? 'jadchamy2001@gmail.com',
+  email: process.env.LEGAL_EMAIL ?? 'jadchamy@hotmail.com',
   phone: process.env.LEGAL_PHONE ?? '',
   /** City/country is enough; a full street address is not required. */
   location: process.env.LEGAL_LOCATION ?? 'Lebanon',
