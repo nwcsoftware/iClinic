@@ -16,12 +16,12 @@ import { useTour, type Rect } from '../../lib/tour'
 // through is the actual control, at full sharpness and full brightness.
 //
 // Dim and blur are deliberately two separate layers. The dim is one element
-// with a clip-path whose inner subpath is wound in reverse, which the nonzero
-// fill rule turns into a cut-out, giving an exactly rounded hole. The blur
-// cannot use that same trick: a backdrop-filter is not reliably clipped by a
-// clip-path, so the filter kept sampling across the hole and the spotlighted
-// control came out blurred. Instead the blur lives in four panels that stop at
-// the edges of the hole, so no blurring element overlaps the target at all.
+// whose clip-path nests a rounded rect inside a full-screen one, cutting an
+// exactly rounded hole. The blur cannot use that same trick: a backdrop-filter
+// is not reliably clipped by a clip-path, so the filter kept sampling across
+// the hole and the spotlighted control came out blurred. Instead the blur lives
+// in four panels that stop at the edges of the hole, so no blurring element
+// overlaps the target at all.
 //
 // The cost is four small corner slivers, between the rounded hole and the
 // rectangular panels, that are dimmed but not blurred. At this radius that is
@@ -44,14 +44,22 @@ function holePath(w: number, h: number, r: Rect, radius: number) {
   const x2 = Math.min(w, r.x + r.width + PAD)
   const y2 = Math.min(h, r.y + r.height + PAD)
   const rad = Math.max(0, Math.min(radius, (x2 - x1) / 2, (y2 - y1) / 2))
-  // Outer rect clockwise, inner rounded rect counter-clockwise.
+
+  // The outer rect runs clockwise and the inner one anti-clockwise (arc sweep
+  // flag 0, travelling down the left side first), so their windings cancel and
+  // the middle is left empty. Getting this wrong does not fail loudly: two
+  // subpaths wound the same way give a winding of 2, which the nonzero rule
+  // still counts as inside, and the "hole" quietly stays filled.
+  //
+  // The caller also asks for the even-odd rule, which produces the hole from
+  // nesting alone. Belt and braces, because the failure is invisible.
   return (
     `M0 0 H${w} V${h} H0 Z ` +
     `M${x1 + rad} ${y1} ` +
-    `H${x2 - rad} A${rad} ${rad} 0 0 1 ${x2} ${y1 + rad} ` +
-    `V${y2 - rad} A${rad} ${rad} 0 0 1 ${x2 - rad} ${y2} ` +
-    `H${x1 + rad} A${rad} ${rad} 0 0 1 ${x1} ${y2 - rad} ` +
-    `V${y1 + rad} A${rad} ${rad} 0 0 1 ${x1 + rad} ${y1} Z`
+    `A${rad} ${rad} 0 0 0 ${x1} ${y1 + rad} ` +
+    `V${y2 - rad} A${rad} ${rad} 0 0 0 ${x1 + rad} ${y2} ` +
+    `H${x2 - rad} A${rad} ${rad} 0 0 0 ${x2} ${y2 - rad} ` +
+    `V${y1 + rad} A${rad} ${rad} 0 0 0 ${x2 - rad} ${y1} Z`
   )
 }
 
@@ -109,7 +117,7 @@ export default function SpotlightOverlay() {
           style={[
             StyleSheet.absoluteFill,
             styles.scrim,
-            { clipPath: `path('${holePath(width, height, rect, CORNER)}')`, transition } as ViewStyle,
+            { clipPath: `path(evenodd, '${holePath(width, height, rect, CORNER)}')`, transition } as ViewStyle,
           ]}
         />
         {panels}
