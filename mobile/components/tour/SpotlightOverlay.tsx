@@ -13,11 +13,21 @@ import { useTour, type Rect } from '../../lib/tour'
 // The dimmed, blurred layer with one live control cut out of it.
 //
 // The hole is a real hole: nothing is painted over the target, so what shows
-// through is the actual button, at full sharpness and full brightness. On web
-// that is a clip-path with a reversed inner subpath, which the nonzero fill
-// rule turns into a cut-out — one element, so the backdrop blur applies to the
-// dimmed area and stops at the hole. Native has no backdrop filter, so it gets
-// four dim panels around the target instead: same cut-out, no blur.
+// through is the actual control, at full sharpness and full brightness.
+//
+// Dim and blur are deliberately two separate layers. The dim is one element
+// with a clip-path whose inner subpath is wound in reverse, which the nonzero
+// fill rule turns into a cut-out, giving an exactly rounded hole. The blur
+// cannot use that same trick: a backdrop-filter is not reliably clipped by a
+// clip-path, so the filter kept sampling across the hole and the spotlighted
+// control came out blurred. Instead the blur lives in four panels that stop at
+// the edges of the hole, so no blurring element overlaps the target at all.
+//
+// The cost is four small corner slivers, between the rounded hole and the
+// rectangular panels, that are dimmed but not blurred. At this radius that is
+// a couple of pixels and invisible; a blurred spotlight is not.
+//
+// Native has no backdrop filter, so it gets the panels for dimming and no blur.
 // ---------------------------------------------------------------------------
 
 const PAD = 8            // halo around the target
@@ -69,36 +79,43 @@ export default function SpotlightOverlay() {
   const last = index + 1 >= total
   const transition = reduceMotion ? undefined : 'clip-path 320ms cubic-bezier(0.22, 1, 0.36, 1)'
 
-  // --- the dim + blur layer, with the target cut out of it ------------------
+  // --- the dim and blur layers, with the target cut out of both -------------
   let dim: React.ReactNode
   if (!rect) {
     // Not measured yet: dim everything, no hole, so the step still reads.
     dim = <View style={[StyleSheet.absoluteFill, styles.scrim, isWeb && (webBlur as ViewStyle)]} />
-  } else if (isWeb) {
-    dim = (
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          styles.scrim,
-          webBlur as ViewStyle,
-          { clipPath: `path('${holePath(width, height, rect, CORNER)}')`, transition } as ViewStyle,
-        ]}
-      />
-    )
   } else {
-    // Four panels leave the target uncovered. No blur: React Native has no
-    // backdrop filter, and a fake blur would have to paint over the element.
     const x1 = Math.max(0, rect.x - PAD)
     const y1 = Math.max(0, rect.y - PAD)
     const x2 = Math.min(width, rect.x + rect.width + PAD)
     const y2 = Math.min(height, rect.y + rect.height + PAD)
-    dim = (
+
+    // Panels around the hole. On web they carry the blur, and because they
+    // stop at the hole's edges they can never blur the spotlighted control.
+    const panel = (s: ViewStyle, key: string) => (
+      <View key={key} pointerEvents="none" style={[s, isWeb ? (webBlur as ViewStyle) : styles.scrim]} />
+    )
+    const panels = [
+      panel({ position: 'absolute', left: 0, right: 0, top: 0, height: y1 }, 'top'),
+      panel({ position: 'absolute', left: 0, right: 0, top: y2, bottom: 0 }, 'bottom'),
+      panel({ position: 'absolute', left: 0, width: x1, top: y1, height: y2 - y1 }, 'left'),
+      panel({ position: 'absolute', right: 0, width: Math.max(0, width - x2), top: y1, height: y2 - y1 }, 'right'),
+    ]
+
+    dim = isWeb ? (
       <>
-        <View style={[styles.scrim, { position: 'absolute', left: 0, right: 0, top: 0, height: y1 }]} />
-        <View style={[styles.scrim, { position: 'absolute', left: 0, right: 0, top: y2, bottom: 0 }]} />
-        <View style={[styles.scrim, { position: 'absolute', left: 0, width: x1, top: y1, height: y2 - y1 }]} />
-        <View style={[styles.scrim, { position: 'absolute', right: 0, width: width - x2, top: y1, height: y2 - y1 }]} />
+        {/* Dim, with an exactly rounded hole. No filter on this element. */}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.scrim,
+            { clipPath: `path('${holePath(width, height, rect, CORNER)}')`, transition } as ViewStyle,
+          ]}
+        />
+        {panels}
       </>
+    ) : (
+      <>{panels}</>
     )
   }
 
