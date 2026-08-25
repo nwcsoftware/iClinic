@@ -11,11 +11,12 @@
 // after every web export — `npm run build:web` does both.
 // ---------------------------------------------------------------------------
 
-import { readdirSync, statSync, readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, rmSync } from 'node:fs'
+import { readdirSync, statSync, readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, rmSync, copyFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DIST = fileURLToPath(new URL('../dist', import.meta.url))
+const DEPLOY = fileURLToPath(new URL('../deploy', import.meta.url))
 const FROM_DIR = join(DIST, 'assets', 'node_modules')
 const TO_DIR = join(DIST, 'assets', 'vendor')
 const FROM_REF = '/assets/node_modules/'
@@ -73,4 +74,11 @@ if (stragglers.length || existsSync(FROM_DIR)) {
   process.exit(1)
 }
 
-console.log(`Moved ${moved} asset(s) out of node_modules/, rewrote ${patched} file(s).`)
+// `expo export` clears dist/, which takes the Vercel routing config and the
+// project link with it. Both are kept in deploy/ and reinstalled here, so a
+// build is reproducible and the policy redirects cannot go missing unnoticed.
+copyFileSync(join(DEPLOY, 'vercel.json'), join(DIST, 'vercel.json'))
+mkdirSync(join(DIST, '.vercel'), { recursive: true })
+copyFileSync(join(DEPLOY, 'vercel-project.json'), join(DIST, '.vercel', 'project.json'))
+
+console.log(`Moved ${moved} asset(s) out of node_modules/, rewrote ${patched} file(s), installed deploy config.`)

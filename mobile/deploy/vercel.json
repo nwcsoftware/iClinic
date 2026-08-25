@@ -1,0 +1,7 @@
+{
+  "redirects": [
+    { "source": "/terms", "destination": "https://iclinic.health/terms", "permanent": false },
+    { "source": "/privacy", "destination": "https://iclinic.health/privacy", "permanent": false },
+    { "source": "/refund-policy", "destination": "https://iclinic.health/refund-policy", "permanent": false }
+  ]
+}
