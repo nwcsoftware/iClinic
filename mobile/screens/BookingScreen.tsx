@@ -189,7 +189,7 @@ export default function BookingScreen({
       <View style={[styles.confirmBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <View style={{ flex: 1 }}>
           <Text style={type.small}>{selectedSlot ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }) : t('booking.pickTime')}</Text>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink }}>{selectedSlot ?? '—'}</Text>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink }}>{selectedSlot ?? '-'}</Text>
         </View>
         <PrimaryButton label={t('booking.confirm')} onPress={confirm} loading={saving} disabled={!selectedSlot} style={{ paddingHorizontal: 22 }} />
       </View>

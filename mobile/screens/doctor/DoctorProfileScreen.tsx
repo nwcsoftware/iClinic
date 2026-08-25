@@ -65,7 +65,7 @@ export default function DoctorProfileScreen({
               </View>
               {access.is_trial && access.days_left <= 5 ? (
                 <Text style={[type.sub, { marginTop: 12, color: colors.amber }]}>
-                  Your trial ends soon — subscribe to stay visible to patients.
+                  Your trial ends soon. Subscribe to stay visible to patients.
                 </Text>
               ) : null}
             </Card>

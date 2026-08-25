@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useTour } from '../lib/tour'
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
@@ -37,6 +38,16 @@ export default function EmergencyButton() {
   const country = getCountry(countryCode)
   const primary = country.services[0]
 
+  // Registered directly rather than wrapped in a <TourTarget>: the button is
+  // absolutely positioned, so a wrapper View would become its containing block
+  // and throw it into the wrong corner.
+  const fabRef = useRef<View | null>(null)
+  const { register } = useTour()
+  useEffect(() => {
+    register('emergency', fabRef.current)
+    return () => register('emergency', null)
+  }, [register])
+
   function choose(code: string) {
     setCountryCode(code)
     saveCountry(code)
@@ -46,6 +57,7 @@ export default function EmergencyButton() {
   return (
     <>
       <Pressable
+        ref={fabRef}
         onPress={() => setOpen(true)}
         style={[styles.fab, { bottom: Math.max(insets.bottom, 10) + 68 }]}
         hitSlop={6}

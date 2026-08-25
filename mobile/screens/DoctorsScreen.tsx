@@ -7,6 +7,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import { getDoctors, type Doctor } from '../lib/api'
 import { colors, radius, iconForSpecialty, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
+import { TourTarget } from '../lib/tour'
 import { Avatar, Card, EmptyState, Rating } from '../components/ui'
 import { FadeInUp } from '../components/motion'
 
@@ -40,6 +41,7 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
       <FadeInUp>
         <View style={{ paddingTop: Math.max(insets.top, Platform.OS === 'web' ? 20 : 14) + 8, paddingHorizontal: 20 }}>
           <Text style={type.h1}>{t('doctors.title')}</Text>
+          <TourTarget id="doctorSearch">
           <View style={styles.searchWrap}>
             <Feather name="search" size={17} color={colors.textFaint} />
             <TextInput
@@ -55,6 +57,7 @@ export default function DoctorsScreen({ onPickDoctor }: { onPickDoctor: (d: Doct
               </Pressable>
             )}
           </View>
+          </TourTarget>
         </View>
       </FadeInUp>
 

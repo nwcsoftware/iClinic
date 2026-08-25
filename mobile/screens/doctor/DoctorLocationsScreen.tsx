@@ -136,7 +136,7 @@ export default function DoctorLocationsScreen({ onBack }: { onBack: () => void }
                       {w.location && w.location.latitude == null ? (
                         <View style={styles.warnRow}>
                           <Feather name="alert-triangle" size={12} color={colors.amber} />
-                          <Text style={styles.warnText}>Not on the map yet — we could not find these coordinates</Text>
+                          <Text style={styles.warnText}>Not on the map yet. We could not find these coordinates</Text>
                         </View>
                       ) : null}
                     </View>

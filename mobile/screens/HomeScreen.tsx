@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons'
 import { getDoctors, getMyAppointments, type Appointment, type Doctor, type PatientInfo } from '../lib/api'
 import { colors, radius, shadow, specialtyIcon, DEFAULT_SPECIALTY_ICON, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
+import { TourTarget } from '../lib/tour'
 import { Avatar, Card, Rating, SectionHeader, SpecIcon } from '../components/ui'
 import { AmbientBackground, FadeInUp } from '../components/motion'
 
@@ -82,6 +83,7 @@ export default function HomeScreen({
       <View style={{ paddingHorizontal: 20 }}>
         {/* Assistant hero */}
         <FadeInUp delay={60}>
+          <TourTarget id="chatbot">
           <Pressable onPress={onStartTriage} style={({ pressed }) => [styles.hero, pressed && { transform: [{ scale: 0.985 }] }]}>
             <View style={{ flex: 1, paddingRight: 6 }}>
               <Text style={styles.heroKicker}>{t('home.assistant')}</Text>
@@ -94,6 +96,7 @@ export default function HomeScreen({
             </View>
             <Image source={heroArt} style={styles.heroArt} resizeMode="cover" />
           </Pressable>
+          </TourTarget>
         </FadeInUp>
 
         {/* Trust strip */}

@@ -73,7 +73,7 @@ export default function PaywallScreen({
             </ScaleIn>
             <Text style={[type.h1, { marginTop: 16, textAlign: 'center' }]}>{heading}</Text>
             <Text style={[type.sub, { marginTop: 8, textAlign: 'center' }]}>
-              Dr. {doctor.full_name.replace(/^dr\.?\s*/i, '')} — reactivate to keep receiving patients.
+              Dr. {doctor.full_name.replace(/^dr\.?\s*/i, '')}. Reactivate to keep receiving patients.
             </Text>
           </View>
         </FadeInUp>
@@ -151,7 +151,7 @@ export default function PaywallScreen({
                   : (
                     <>
                       <Feather name="refresh-cw" size={16} color={colors.doc} />
-                      <Text style={styles.refreshText}>I&apos;ve paid — check again</Text>
+                      <Text style={styles.refreshText}>I&apos;ve paid, check again</Text>
                     </>
                   )}
               </Pressable>

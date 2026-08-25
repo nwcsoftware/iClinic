@@ -217,8 +217,8 @@ export default function AppointmentsPage() {
                   </TableCell>
                   <TableCell className="text-slate-600 whitespace-nowrap">{a.start_time.slice(0, 5)}</TableCell>
                   <TableCell className="font-medium text-slate-800">{a.patient_name}</TableCell>
-                  {profile?.role === 'receptionist' && <TableCell className="text-slate-500">{a.doctor_name ?? '—'}</TableCell>}
-                  <TableCell className="text-slate-500 max-w-[180px] truncate">{a.reason ?? '—'}</TableCell>
+                  {profile?.role === 'receptionist' && <TableCell className="text-slate-500">{a.doctor_name ?? '-'}</TableCell>}
+                  <TableCell className="text-slate-500 max-w-[180px] truncate">{a.reason ?? '-'}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_COLORS[a.status]}`}>
                       {a.status.replace('_', ' ')}

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fetchWithTimeout } from './session'
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL!
 
@@ -131,7 +132,9 @@ export async function loginWithPassword(
   username: string,
   password: string,
 ): Promise<{ access_token: string; refresh_token: string }> {
-  const res = await fetch(`${API_URL}/api/auth/simple-login`, {
+  // Bounded, so a dead network surfaces an error instead of a spinner that
+  // never stops.
+  const res = await fetchWithTimeout(`${API_URL}/api/auth/simple-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),

@@ -206,9 +206,9 @@ export default function PatientsPage() {
               {filtered.map(p => (
                 <TableRow key={p.id} className="hover:bg-slate-50/50">
                   <TableCell className="font-medium text-slate-800">{p.full_name}</TableCell>
-                  <TableCell className="capitalize text-slate-500">{p.gender ?? '—'}</TableCell>
+                  <TableCell className="capitalize text-slate-500">{p.gender ?? '-'}</TableCell>
                   <TableCell className="text-slate-500">
-                    {p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString() : '—'}
+                    {p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString() : '-'}
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1.5 text-slate-600">
@@ -218,7 +218,7 @@ export default function PatientsPage() {
                   <TableCell>
                     {p.email
                       ? <span className="flex items-center gap-1.5 text-slate-600"><Mail className="w-3.5 h-3.5" /> {p.email}</span>
-                      : <span className="text-slate-300">—</span>}
+                      : <span className="text-slate-300">-</span>}
                   </TableCell>
                   <TableCell className="max-w-[160px]">
                     {p.registration_location ? (
@@ -226,7 +226,7 @@ export default function PatientsPage() {
                         <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-slate-400" />
                         <span className="truncate" title={p.registration_location}>{p.registration_location}</span>
                       </span>
-                    ) : <span className="text-slate-300">—</span>}
+                    ) : <span className="text-slate-300">-</span>}
                   </TableCell>
                   <TableCell>
                     <Badge variant={p.is_email_verified || p.is_mobile_verified ? 'default' : 'secondary'}>

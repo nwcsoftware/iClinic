@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { org } from '@/lib/legal'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — iClinic',
+  title: 'Privacy Policy | iClinic',
   description: 'What data iClinic collects, why, who can see it, and how to have it deleted.',
 }
 
@@ -21,30 +21,30 @@ export default function PrivacyPage() {
       <h2>What we collect</h2>
       <ul>
         <li>
-          <strong>Account details</strong> — name, mobile number, email, and for patients optionally
+          <strong>Account details:</strong> name, mobile number, email, and for patients optionally
           date of birth and gender.
         </li>
         <li>
-          <strong>Health information you choose to add</strong> — allergies, long-term illnesses,
+          <strong>Health information you choose to add:</strong> allergies, long-term illnesses,
           blood type and any notes you write in your medical profile.
         </li>
         <li>
-          <strong>Appointments</strong> — which doctor, when, and the reason for the visit if you
+          <strong>Appointments:</strong> which doctor, when, and the reason for the visit if you
           give one.
         </li>
         <li>
-          <strong>Prescriptions</strong> — medicines a doctor prescribes you, with dosage and
+          <strong>Prescriptions:</strong> medicines a doctor prescribes you, with dosage and
           instructions.
         </li>
         <li>
-          <strong>Assistant conversations</strong> — what you type to the symptom assistant and what
+          <strong>Assistant conversations:</strong> what you type to the symptom assistant and what
           it replies, so you can return to a conversation.
         </li>
         <li>
-          <strong>Reviews</strong> — a rating and optional comment after a visit.
+          <strong>Reviews:</strong> a rating and optional comment after a visit.
         </li>
         <li>
-          <strong>Billing records for doctors</strong> — subscription status and payment history. We
+          <strong>Billing records for doctors:</strong> subscription status and payment history. We
           never see or store full card numbers; where card payment is used, only the card brand,
           last four digits and expiry are kept.
         </li>
@@ -60,10 +60,10 @@ export default function PrivacyPage() {
       <h2>Who can see your information</h2>
       <ul>
         <li>
-          <strong>You</strong> — your own profile, appointments, prescriptions and conversations.
+          <strong>You:</strong> your own profile, appointments, prescriptions and conversations.
         </li>
         <li>
-          <strong>Doctors you have booked with</strong> — your contact details, the medical profile
+          <strong>Doctors you have booked with:</strong> your contact details, the medical profile
           you have filled in, your visit history with them, and prescriptions. A doctor you have
           never had an appointment with cannot open your record.
         </li>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           <strong>Clinic staff</strong> where a clinic uses {org.product} to manage its bookings.
         </li>
         <li>
-          <strong>Service providers we rely on</strong> — our hosting and database provider, and a
+          <strong>Service providers we rely on:</strong> our hosting and database provider, and a
           payment provider for doctor subscriptions. They process data on our instructions.
         </li>
       </ul>
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
       <p>
         We keep your account and medical records while your account is open, because a medical
         history is only useful over time. If you ask us to delete your account we remove your
-        personal data, except where we must keep a record for legal or accounting reasons — for
+        personal data, except where we must keep a record for legal or accounting reasons, for
         example a payment record.
       </p>
 
@@ -99,7 +99,7 @@ export default function PrivacyPage() {
       <ul>
         <li>Edit your profile, allergies and long-term illnesses at any time in the app.</li>
         <li>Ask for a copy of your data, or ask us to correct or delete it.</li>
-        <li>Leave the medical profile empty — it is optional, though a doctor then knows less about you.</li>
+        <li>Leave the medical profile empty. It is optional, though a doctor then knows less about you.</li>
       </ul>
       <p>
         To make any of these requests, email <a href={`mailto:${org.email}`}>{org.email}</a>. We will

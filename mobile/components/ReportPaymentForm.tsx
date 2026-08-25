@@ -46,7 +46,7 @@ export default function ReportPaymentForm({
       <View style={styles.doneBox}>
         <Feather name="check-circle" size={18} color={colors.success} />
         <Text style={styles.doneText}>
-          Thanks — we&apos;ve got it. Your account is usually activated within 24 hours.
+          Thanks, we&apos;ve got it. Your account is usually activated within 24 hours.
         </Text>
       </View>
     )
@@ -57,7 +57,7 @@ export default function ReportPaymentForm({
       <Pressable onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.trigger, pressed && { backgroundColor: colors.docSofter }]}>
         <Feather name="upload" size={16} color={colors.doc} />
-        <Text style={styles.triggerText}>I&apos;ve paid — tell the clinic</Text>
+        <Text style={styles.triggerText}>I&apos;ve paid, tell the clinic</Text>
       </Pressable>
     )
   }

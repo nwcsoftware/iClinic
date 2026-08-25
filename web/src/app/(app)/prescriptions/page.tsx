@@ -187,10 +187,10 @@ export default function PrescriptionsPage() {
               {printRx.items.map((item, i) => (
                 <tr key={i} className="border-b border-gray-100">
                   <td className="py-2 pr-4 font-medium">{item.medication_name}</td>
-                  <td className="py-2 pr-4 text-gray-600">{item.dosage ?? '—'}</td>
-                  <td className="py-2 pr-4 text-gray-600">{item.frequency ?? '—'}</td>
-                  <td className="py-2 pr-4 text-gray-600">{item.duration ?? '—'}</td>
-                  <td className="py-2 text-gray-600">{item.route ?? '—'}</td>
+                  <td className="py-2 pr-4 text-gray-600">{item.dosage ?? '-'}</td>
+                  <td className="py-2 pr-4 text-gray-600">{item.frequency ?? '-'}</td>
+                  <td className="py-2 pr-4 text-gray-600">{item.duration ?? '-'}</td>
+                  <td className="py-2 text-gray-600">{item.route ?? '-'}</td>
                 </tr>
               ))}
             </tbody>

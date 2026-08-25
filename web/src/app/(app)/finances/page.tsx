@@ -244,12 +244,12 @@ export default function FinancesPage() {
               {filtered.map(r => (
                 <TableRow key={r.id} className="hover:bg-slate-50/50">
                   <TableCell className="text-slate-500 whitespace-nowrap">
-                    {r.appointment_date ? new Date(r.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                    {r.appointment_date ? new Date(r.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
                   </TableCell>
                   <TableCell className="font-medium text-slate-800">{r.patient_name}</TableCell>
                   {profile?.role === 'receptionist' && <TableCell className="text-slate-500">{r.doctor_name}</TableCell>}
                   <TableCell className="text-slate-500">{Number(r.base_price).toLocaleString()}</TableCell>
-                  <TableCell className="text-rose-500">{Number(r.discount_amount) > 0 ? `-${Number(r.discount_amount).toLocaleString()}` : '—'}</TableCell>
+                  <TableCell className="text-rose-500">{Number(r.discount_amount) > 0 ? `-${Number(r.discount_amount).toLocaleString()}` : '-'}</TableCell>
                   <TableCell className="font-semibold text-slate-800">{Number(r.net_amount).toLocaleString()} <span className="text-xs text-slate-400">{r.currency}</span></TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_COLORS[r.payment_status]}`}>
@@ -269,7 +269,7 @@ export default function FinancesPage() {
                         </Button>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-300">—</span>
+                      <span className="text-xs text-slate-300">-</span>
                     )}
                   </TableCell>
                 </TableRow>

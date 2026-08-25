@@ -78,7 +78,7 @@ export default function ProfileScreen({
 
       <View style={{ alignItems: 'center', marginTop: 22, marginBottom: 20 }}>
         <Avatar name={patient?.full_name ?? 'Me'} size={84} />
-        <Text style={[type.h1, { marginTop: 14 }]}>{patient?.full_name ?? '—'}</Text>
+        <Text style={[type.h1, { marginTop: 14 }]}>{patient?.full_name ?? '-'}</Text>
         {patient?.email ? <Text style={[type.sub, { marginTop: 4 }]}>{patient.email}</Text> : null}
       </View>
 
@@ -120,7 +120,7 @@ export default function ProfileScreen({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={type.h2}>{t('guide.howItWorks')}</Text>
-            <Text style={[type.sub, { marginTop: 2 }]}>{t('guide.replay')}</Text>
+            <Text style={[type.sub, { marginTop: 2 }]}>{t('tour.replay')}</Text>
           </View>
           <Feather name={isRTL ? 'chevron-left' : 'chevron-right'} size={18} color={colors.textFaint} />
         </View>
@@ -172,9 +172,9 @@ export default function ProfileScreen({
           </View>
         ) : (
           <View>
-            <Row label={t('profile.fullName')} value={patient?.full_name ?? '—'} />
-            <Row label={t('profile.mobile')} value={patient?.mobile_number ?? '—'} />
-            <Row label={t('profile.email')} value={patient?.email ?? '—'} last />
+            <Row label={t('profile.fullName')} value={patient?.full_name ?? '-'} />
+            <Row label={t('profile.mobile')} value={patient?.mobile_number ?? '-'} />
+            <Row label={t('profile.email')} value={patient?.email ?? '-'} last />
             <Pressable onPress={() => setEditing(true)} style={styles.editBtn}>
               <Text style={{ color: colors.brand, fontWeight: '800', fontSize: 14 }}>{t('profile.edit')}</Text>
             </Pressable>

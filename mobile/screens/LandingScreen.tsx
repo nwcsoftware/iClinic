@@ -31,12 +31,12 @@ const FEATURES: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: str
 const DOCTOR_FEATURES: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; body: string }[] = [
   { icon: 'calendar-clock', title: 'Your week, your rules', body: 'Set the hours you work at each place and block the days you do not. Bookings arrive without a phone ringing.' },
   { icon: 'hospital-building', title: 'Every place you work', body: 'Hospital on Monday, private clinic on Thursday. Add each one and patients see where their appointment will be.' },
-  { icon: 'clipboard-pulse-outline', title: 'The history before the visit', body: 'Allergies, chronic conditions, past surgeries and previous visits — on screen before the patient sits down.' },
+  { icon: 'clipboard-pulse-outline', title: 'The history before the visit', body: 'Allergies, chronic conditions, past surgeries and previous visits, on screen before the patient sits down.' },
   { icon: 'prescription', title: 'Prescriptions that are clear', body: 'Dosage, times of day and duration, in a form the patient can actually follow.' },
 ]
 
 const CONNECTED = [
-  { step: '01', title: 'The patient writes it once', body: 'Allergies, conditions, blood type, past surgeries — on their own phone, in their own time.' },
+  { step: '01', title: 'The patient writes it once', body: 'Allergies, conditions, blood type, past surgeries, on their own phone, in their own time.' },
   { step: '02', title: 'The doctor sees it at the visit', body: 'A timeline of appointments, diagnoses and prescriptions, with no form to fill in at reception.' },
   { step: '03', title: 'The visit adds to it', body: 'What was diagnosed and prescribed goes back to the same record, ready for whoever sees them next.' },
 ]
@@ -106,7 +106,7 @@ export default function LandingScreen({
               <Feather name="arrow-right" size={17} color={colors.brand} />
             </Pressable>
             <Text style={styles.heroNote}>
-              Free for patients. Not for emergencies — call 112 in Lebanon.
+              Free for patients. Not for emergencies. Call 112 in Lebanon.
             </Text>
           </FadeInUp>
         </View>
@@ -214,7 +214,7 @@ export default function LandingScreen({
                 <Text style={[type.sub, { marginTop: 4 }]}>
                   The assistant suggests which kind of doctor to see. It does not diagnose, treat, or
                   give medical advice, and is never a substitute for a qualified professional. In an
-                  emergency call your local emergency number — in Lebanon that is 112 for police,
+                  emergency call your local emergency number. In Lebanon that is 112 for police,
                   140 for the Red Cross ambulance and 125 for Civil Defence.
                 </Text>
               </View>

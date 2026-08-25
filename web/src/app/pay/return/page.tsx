@@ -64,7 +64,7 @@ export default async function PayReturnPage({
   // pending / error — do not guess. Say so honestly.
   return (
     <Result ok={false} title="Still confirming"
-      body="The gateway has not confirmed this payment yet. If money left your account, your subscription will activate automatically within a few minutes — you do not need to pay again." />
+      body="The gateway has not confirmed this payment yet. If money left your account, your subscription will activate automatically within a few minutes. you do not need to pay again." />
   )
 }
 

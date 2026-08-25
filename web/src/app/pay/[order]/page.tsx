@@ -21,13 +21,13 @@ export default async function PayPage({ params }: { params: Promise<{ order: str
   const amount = `${Number(row.amount_usd).toFixed(2)} ${row.currency ?? 'USD'}`
 
   return (
-    <Shell title="Complete your payment" body={`${row.description ?? 'iClinic subscription'} — ${amount}`}>
+    <Shell title="Complete your payment" body={`${row.description ?? 'iClinic subscription'}: ${amount}`}>
       {areebaIsTestMerchant() ? (
         <p style={{
           background: '#FEF6E7', color: '#B45309', padding: '10px 12px', borderRadius: 10,
           fontSize: 13, fontWeight: 600, margin: '0 0 18px',
         }}>
-          Test mode — no real money will move.
+          Test mode. No real money will move.
         </p>
       ) : null}
 

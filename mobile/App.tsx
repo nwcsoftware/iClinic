@@ -5,8 +5,9 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Feather } from '@expo/vector-icons'
 import { I18nProvider, useI18n } from './lib/i18n'
 import { supabase } from './lib/supabase'
-import { initPatient, getDoctorById, type Doctor, type PatientInfo } from './lib/api'
-import { getDoctorMe, type DoctorMe } from './lib/doctorApi'
+import { getDoctorById, type Doctor, type PatientInfo } from './lib/api'
+import { type DoctorMe } from './lib/doctorApi'
+import { getMe } from './lib/session'
 import { colors, shadow } from './lib/theme'
 import SplashScreen from './components/SplashScreen'
 import AuthScreen from './screens/AuthScreen'
@@ -22,7 +23,8 @@ import AppointmentsScreen from './screens/AppointmentsScreen'
 import ProfileScreen from './screens/ProfileScreen'
 import MedicalInfoScreen from './screens/MedicalInfoScreen'
 import MedicationsScreen from './screens/MedicationsScreen'
-import GuideScreen, { hasSeenGuide } from './screens/GuideScreen'
+import { TourProvider, TourTarget, useTour, hasSeenTour, type TourScreen } from './lib/tour'
+import SpotlightOverlay from './components/tour/SpotlightOverlay'
 import DoctorPatientDetailScreen from './screens/doctor/DoctorPatientDetailScreen'
 import DoctorVisitsScreen from './screens/doctor/DoctorVisitsScreen'
 import DoctorPrescribeScreen from './screens/doctor/DoctorPrescribeScreen'
@@ -45,7 +47,6 @@ type Overlay =
   | { kind: 'triage' }
   | { kind: 'booking'; doctor: Doctor; reason: string }
   | { kind: 'medical' }
-  | { kind: 'guide' }
   | { kind: 'map' }
   | null
 type DoctorOverlay =
@@ -120,7 +121,8 @@ function PatientTabBar({
   const item = (tb: { key: PatientTab; icon: keyof typeof Feather.glyphMap; label: string }) => {
     const active = tb.key === tab && !mapActive
     return (
-      <Pressable key={tb.key} onPress={() => onTab(tb.key)} style={styles.tabItem} hitSlop={6}>
+      <TourTarget key={tb.key} id={`${tb.key}Tab`} style={styles.tabItem}>
+      <Pressable onPress={() => onTab(tb.key)} style={styles.tabItemInner} hitSlop={6}>
         <View style={[styles.tabIconWrap, active && { backgroundColor: colors.brandSoft }]}>
           <Feather name={tb.icon} size={19} color={active ? colors.brand : colors.tabInactive} />
         </View>
@@ -128,12 +130,15 @@ function PatientTabBar({
           {t(tb.label as never)}
         </Text>
       </Pressable>
+      </TourTarget>
     )
   }
   return (
     <View style={[styles.tabbar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {PATIENT_TABS_LEFT.map(item)}
-      <FloatingMapNavButton onPress={onMap} active={mapActive} hasNearby={hasNearby} />
+      <TourTarget id="mapOrb">
+        <FloatingMapNavButton onPress={onMap} active={mapActive} hasNearby={hasNearby} />
+      </TourTarget>
       {PATIENT_TABS_RIGHT.map(item)}
     </View>
   )
@@ -145,8 +150,6 @@ function Main() {
   const [dTab, setDTab] = useState<DoctorTab>('dhome')
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [docOverlay, setDocOverlay] = useState<DoctorOverlay>(null)
-  // First-run walkthrough. Shown once, then re-openable from Profile.
-  const [showGuide, setShowGuide] = useState(false)
   // A policy opened from the landing page, shown over it.
   const [policy, setPolicy] = useState<Policy['key'] | null>(null)
   // Whether the map has anything on it — the orb only pulses when it does,
@@ -158,20 +161,23 @@ function Main() {
   const resolved = useRef<Phase | null>(null)
 
   // Doctors land on the doctor shell; everyone else on the patient flow.
+  // One request decides which shell to open into. This used to ask
+  // /api/doctor/me and then, once that came back empty, /api/patient/init —
+  // two round trips in sequence, each re-validating the same token, for an
+  // answer a single call can give.
   const resolveAfterAuth = useCallback(async (): Promise<Phase> => {
     try {
-      const { doctor, access } = await getDoctorMe()
-      if (doctor) {
-        setDoctorMe(doctor)
-        return access && !access.has_access ? 'paywall' : 'doctor'
+      const me = await getMe()
+      if (me.kind === 'doctor') {
+        setDoctorMe(me.doctor)
+        return me.access && !me.access.has_access ? 'paywall' : 'doctor'
       }
-    } catch { /* fall through to patient flow */ }
-    try {
-      const { patient: p, needs_profile } = await initPatient()
-      if (needs_profile) return 'setup'
-      setPatient(p)
+      if (me.needs_profile) return 'setup'
+      setPatient(me.patient)
       return 'patient'
     } catch {
+      // Network trouble after a valid sign-in: the patient shell degrades
+      // gracefully on its own, so land there rather than bouncing to login.
       return 'patient'
     }
   }, [])
@@ -195,13 +201,25 @@ function Main() {
     return () => { active = false }
   }, [phase])
 
-  // New patients get the walkthrough before they see the app.
+  // New patients get the walkthrough over the real screen, once.
+  const tour = useTour()
+  const startTour = tour.start
+  const setNavigator = tour.setNavigator
+
+  // A step can live on another tab. Any open sheet is closed first, or the
+  // tour would spotlight something hidden behind it.
+  useEffect(() => {
+    setNavigator((screen: TourScreen) => {
+      setOverlay(null)
+      setPTab(screen)
+    })
+  }, [setNavigator])
   useEffect(() => {
     if (phase !== 'patient') return
     let active = true
-    hasSeenGuide().then((seen) => { if (active && !seen) setShowGuide(true) })
+    hasSeenTour().then((seen) => { if (active && !seen) startTour() })
     return () => { active = false }
-  }, [phase])
+  }, [phase, startTour])
 
   useEffect(() => {
     let active = true
@@ -337,8 +355,6 @@ function Main() {
 
   // ── Patient shell ─────────────────────────────────────────────────────────
   // The walkthrough comes before everything else on first launch.
-  if (showGuide) return <GuideScreen onDone={() => setShowGuide(false)} />
-  if (overlay?.kind === 'guide') return <GuideScreen onDone={() => setOverlay(null)} />
 
   if (overlay?.kind === 'map') {
     return (
@@ -414,7 +430,7 @@ function Main() {
             onSignedOut={() => setPhase('landing')}
             onPatientUpdated={setPatient}
             onOpenMedical={() => setOverlay({ kind: 'medical' })}
-            onOpenGuide={() => setOverlay({ kind: 'guide' })}
+            onOpenGuide={() => { setPTab('home'); tour.start() }}
             onOpenMeds={() => setPTab('meds')}
           />
         )}
@@ -438,6 +454,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <I18nProvider>
+      <TourProvider>
       <StatusBar style="dark" />
       {framed ? (
         <View style={styles.frameOuter}>
@@ -450,6 +467,10 @@ export default function App() {
           <Main />
         </View>
       )}
+      {/* Above the frame, so the dimmed area covers the whole window while the
+          hole still lines up with the measured control inside it. */}
+      <SpotlightOverlay />
+      </TourProvider>
       </I18nProvider>
     </SafeAreaProvider>
   )
@@ -465,7 +486,8 @@ const styles = StyleSheet.create({
     // The floating orb overhangs the top edge.
     overflow: 'visible',
   },
-  tabItem: { flex: 1, alignItems: 'center', gap: 3 },
+  tabItem: { flex: 1 },
+  tabItemInner: { alignItems: 'center', gap: 3 },
   tabIconWrap: {
     width: 46, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center',
   },

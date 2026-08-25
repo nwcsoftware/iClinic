@@ -27,13 +27,25 @@ export async function POST(request: Request) {
     const admin = createAdminClient()
     const email = entry.email
 
-    // Make sure the auth user exists (ignore "already registered").
-    const { error: createErr } = await admin.auth.admin.createUser({ email, email_confirm: true })
-    if (createErr && !/already|registered|exists/i.test(createErr.message)) {
-      return NextResponse.json({ error: createErr.message }, { status: 400 })
+    // A magiclink generateLink creates the account if it does not exist, and
+    // verifying the OTP below confirms the address — so the createUser call
+    // that used to run first was redundant on every login, not just returning
+    // ones. It cost about 1.2s each time, and for an existing account its only
+    // product was an "already registered" error that was then discarded.
+    //
+    // The retry is kept as a genuine fallback rather than removed: if a future
+    // version of generateLink stops auto-creating, first-time sign-in still
+    // works. It runs only on failure, so it costs nothing in the normal case.
+    let { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
+
+    if (linkErr) {
+      const { error: createErr } = await admin.auth.admin.createUser({ email, email_confirm: true })
+      if (createErr && !/already|registered|exists/i.test(createErr.message)) {
+        return NextResponse.json({ error: createErr.message }, { status: 400 })
+      }
+      ;({ data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email }))
     }
 
-    const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
     const otp = link?.properties?.email_otp
     if (linkErr || !otp) {
       return NextResponse.json({ error: linkErr?.message ?? 'Could not sign in' }, { status: 400 })

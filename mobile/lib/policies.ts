@@ -103,7 +103,7 @@ export const POLICIES: Record<Policy['key'], Policy> = {
           'Prescriptions: medicines a doctor prescribes you, with dosage and instructions.',
           'Assistant conversations: what you type to the symptom assistant and what it replies.',
           'Reviews: a rating and optional comment after a visit.',
-          'Billing records for doctors: subscription status and payment history. We never see or store full card numbers — only the card brand, last four digits and expiry.',
+          'Billing records for doctors: subscription status and payment history. We never see or store full card numbers, only the card brand, last four digits and expiry.',
         ],
       },
       {
@@ -152,7 +152,7 @@ export const POLICIES: Record<Policy['key'], Policy> = {
     sections: [
       {
         body: [
-          `This policy covers the $${P.priceUsd.toFixed(2)} per month doctor subscription. Patients are not charged to use iClinic, so nothing here applies to them — any fee for medical care is a matter between the patient and the doctor.`,
+          `This policy covers the $${P.priceUsd.toFixed(2)} per month doctor subscription. Patients are not charged to use iClinic, so nothing here applies to them. Any fee for medical care is a matter between the patient and the doctor.`,
         ],
       },
       {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { org } from '@/lib/legal'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — iClinic',
+  title: 'Terms of Service | iClinic',
   description: 'The terms under which iClinic is provided to doctors and patients in Lebanon.',
 }
 
@@ -42,7 +42,7 @@ export default function TermsPage() {
       <p>
         Doctors listed on {org.product} are independent practitioners. They are responsible for the
         care they provide, including any diagnosis, treatment or prescription. {org.product} is a
-        booking and record-keeping tool and is not a party to the doctor–patient relationship.
+        booking and record-keeping tool and is not a party to the doctor-patient relationship.
       </p>
 
       <h2>3. Accounts</h2>

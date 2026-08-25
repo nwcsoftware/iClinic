@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         status: 'pending',
         months: plan.months,
         reference: reference || null,
-        description: `Reported by doctor — ${plan.label}`,
+        description: `Reported by doctor: ${plan.label}`,
         failure_reason: note,
         // 'claim' keeps these out of the Areeba reconcile job, which only ever
         // re-reads its own pending rows.
@@ -77,11 +77,11 @@ export async function POST(request: Request) {
     // but its failure is swallowed — the claim is already safely recorded.
     const origin = process.env.PUBLIC_WEB_URL ?? new URL(request.url).origin
     await notifyAdmin({
-      subject: `Payment reported: ${doctor.full_name} — $${plan.amount_usd.toFixed(2)}`,
+      subject: `Payment reported: ${doctor.full_name}, $${plan.amount_usd.toFixed(2)}`,
       heading: 'A doctor reported a payment',
       lines: [
         { label: 'Doctor', value: doctor.full_name },
-        { label: 'Amount', value: `$${plan.amount_usd.toFixed(2)} — ${plan.label}` },
+        { label: 'Amount', value: `$${plan.amount_usd.toFixed(2)} for ${plan.label}` },
         { label: 'Method', value: method.replace('_', ' ') },
         { label: 'Reference', value: reference || 'not given' },
         ...(note ? [{ label: 'Note', value: note }] : []),

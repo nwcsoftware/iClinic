@@ -52,17 +52,13 @@ export default function AuthScreen({ onAuthed, onBack }: { onAuthed: () => void;
     setLoading(true)
     try {
       const { access_token, refresh_token } = await loginWithPassword(username, password)
-      const { error: sErr } = await supabase.auth.setSession({ access_token, refresh_token })
-      if (sErr) throw new Error(sErr.message)
 
-      // Wait until the session is readable before continuing.
-      let session = null
-      for (let i = 0; i < 10 && !session; i++) {
-        const { data } = await supabase.auth.getSession()
-        session = data.session
-        if (!session) await new Promise((r) => setTimeout(r, 120))
-      }
-      if (!session) throw new Error(t('auth.sessionFailed'))
+      // setSession returns the stored session, so there is nothing to wait for.
+      // This used to poll getSession up to ten times with 120ms sleeps between
+      // them, which added over a second to a login that had already succeeded.
+      const { data, error: sErr } = await supabase.auth.setSession({ access_token, refresh_token })
+      if (sErr) throw new Error(sErr.message)
+      if (!data.session) throw new Error(t('auth.sessionFailed'))
 
       onAuthed()
     } catch (e) {

@@ -139,7 +139,7 @@ export default function MapPointPicker({
         position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
         justifyContent: 'center', color: colors.textMuted, fontSize: 13, padding: 16, textAlign: 'center',
       }}>
-        {err}. You can still save — the coordinates below are what get used.
+        {err}. You can still save. The coordinates below are what get used.
       </div>
     )
   }

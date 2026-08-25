@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { org } from '@/lib/legal'
 
 export const metadata: Metadata = {
-  title: 'Refunds & Cancellation — iClinic',
+  title: 'Refunds & Cancellation | iClinic',
   description: 'How doctors cancel an iClinic subscription and when a refund is given.',
 }
 
@@ -13,7 +13,7 @@ export default function RefundPolicyPage() {
       <p>
         This policy covers the <strong>${org.priceUsd.toFixed(2)} per month</strong> doctor
         subscription to {org.product}. Patients are not charged to use {org.product}, so nothing
-        here applies to them — any fee for medical care is a matter between the patient and the
+        here applies to them. Any fee for medical care is a matter between the patient and the
         doctor.
       </p>
 
@@ -40,15 +40,15 @@ export default function RefundPolicyPage() {
       <p>We refund in these cases:</p>
       <ul>
         <li>
-          <strong>Within 14 days of a first payment</strong> — if {org.product} is not right for
+          <strong>Within 14 days of a first payment:</strong> if {org.product} is not right for
           you, tell us within 14 days of your first charge and we will refund it in full.
         </li>
         <li>
-          <strong>Duplicate or incorrect charges</strong> — if you were charged twice, or charged
+          <strong>Duplicate or incorrect charges:</strong> if you were charged twice, or charged
           after cancelling, we refund the difference in full.
         </li>
         <li>
-          <strong>Extended service failure</strong> — if {org.product} is unavailable for a
+          <strong>Extended service failure:</strong> if {org.product} is unavailable for a
           prolonged period through our fault, we refund or credit the affected time.
         </li>
       </ul>

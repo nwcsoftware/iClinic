@@ -17,7 +17,7 @@ function age(dob: string | null): string | null {
 }
 
 function longDate(d: string | null): string {
-  if (!d) return '—'
+  if (!d) return '-'
   return new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -104,7 +104,7 @@ export default function DoctorPatientDetailScreen({
             <Text style={[type.h1, { marginTop: 12 }]}>{p.full_name}</Text>
             <Text style={[type.sub, { marginTop: 3 }]}>
               {[p.gender ? p.gender[0].toUpperCase() + p.gender.slice(1) : null, age(p.date_of_birth), p.blood_type]
-                .filter(Boolean).join(' · ') || '—'}
+                .filter(Boolean).join(' · ') || '-'}
             </Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
               <Pressable onPress={() => Linking.openURL(`tel:${p.mobile_number}`)}
@@ -236,7 +236,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function shortDate(d: string | null): string {
-  if (!d) return '—'
+  if (!d) return '-'
   return new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
 }
 

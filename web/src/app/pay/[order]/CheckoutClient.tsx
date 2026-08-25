@@ -58,7 +58,7 @@ export default function CheckoutClient({
           background: '#EAEEFC', color: '#2748B8', padding: '10px 12px', borderRadius: 10,
           fontSize: 13, fontWeight: 600, margin: '0 0 16px',
         }}>
-          Simulator — Areeba credentials are not set. Choose an outcome to test.
+          Simulator: Areeba credentials are not set. Choose an outcome to test.
         </p>
         <a href={`/pay/return?order=${encodeURIComponent(orderId)}&sim=paid`} style={{ ...btn, textAlign: 'center', textDecoration: 'none' }}>
           Simulate successful payment

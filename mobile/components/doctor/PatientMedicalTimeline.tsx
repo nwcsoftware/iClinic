@@ -84,7 +84,7 @@ function VisitEntry({ visit, last }: { visit: Visit; last: boolean }) {
           <View style={styles.locked}>
             <Feather name="lock" size={12} color={colors.textMuted} />
             <Text style={[type.small, { flex: 1 }]}>
-              Recorded by another doctor — their consultation notes are private
+              Recorded by another doctor. Their consultation notes are private
             </Text>
           </View>
         ) : hasClinical ? (

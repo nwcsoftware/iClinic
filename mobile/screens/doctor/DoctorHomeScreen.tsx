@@ -137,7 +137,7 @@ export default function DoctorHomeScreen({
                     <View style={styles.freeIcon}><Feather name="coffee" size={18} color={colors.doc} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={type.h2}>Nothing booked today</Text>
-                      <Text style={[type.sub, { marginTop: 2 }]}>Enjoy the quiet — or open up more slots in Schedule.</Text>
+                      <Text style={[type.sub, { marginTop: 2 }]}>Enjoy the quiet, or open up more slots in Schedule.</Text>
                     </View>
                   </View>
                 </Card>

@@ -10,16 +10,16 @@ import Reveal from '@/components/landing/Reveal'
 import LebanonMap from '@/components/landing/LebanonMap'
 
 export const metadata: Metadata = {
-  title: 'iClinic — The right doctor, in minutes',
+  title: 'iClinic: The right doctor, in minutes',
   description:
-    'iClinic helps people in Lebanon describe how they feel, find the right specialist, book a visit and keep their prescriptions in one place — and gives doctors one place to run their practice.',
+    'iClinic helps people in Lebanon describe how they feel, find the right specialist, book a visit and keep their prescriptions in one place, and gives doctors one place to run their practice.',
 }
 
 const PATIENT_FEATURES = [
   {
     icon: MessageSquareHeart,
     title: 'Describe how you feel',
-    body: 'Say it in your own words. The assistant works out which speciality fits and points you there. It guides — it never diagnoses.',
+    body: 'Say it in your own words. The assistant works out which speciality fits and points you there. It guides. It never diagnoses.',
   },
   {
     icon: CalendarCheck,
@@ -29,7 +29,7 @@ const PATIENT_FEATURES = [
   {
     icon: Pill,
     title: 'Read your prescriptions',
-    body: 'Exactly what to take, how much, at which hours, and for how long — written by your doctor, not copied off a paper you might lose.',
+    body: 'Exactly what to take, how much, at which hours, and for how long, written by your doctor, not copied off a paper you might lose.',
   },
   {
     icon: PhoneCall,
@@ -52,7 +52,7 @@ const DOCTOR_FEATURES = [
   {
     icon: ClipboardList,
     title: 'The history before the visit',
-    body: 'Allergies, chronic conditions, past surgeries and previous visits — on screen before the patient sits down.',
+    body: 'Allergies, chronic conditions, past surgeries and previous visits, on screen before the patient sits down.',
   },
   {
     icon: Users,
@@ -70,7 +70,7 @@ const CONNECTED_STEPS = [
   {
     step: '02',
     title: 'The doctor sees it at the visit',
-    body: 'A timeline of appointments, diagnoses and prescriptions — no forms to fill in at reception, nothing to remember under pressure.',
+    body: 'A timeline of appointments, diagnoses and prescriptions. No forms to fill in at reception, nothing to remember under pressure.',
   },
   {
     step: '03',
@@ -156,7 +156,7 @@ export default function HomePage() {
 
           <Reveal delay={330}>
             <p className="mt-8 text-sm text-slate-400">
-              Free for patients. Not for emergencies — call 112 in Lebanon.
+              Free for patients. Not for emergencies. Call 112 in Lebanon.
             </p>
           </Reveal>
         </div>
@@ -270,7 +270,7 @@ export default function HomePage() {
               Every hospital and clinic, where it actually is
             </h2>
             <p className="mt-5 text-lg leading-8 text-slate-600">
-              Doctors place their own pin — from a Google Maps link, from where they are standing,
+              Doctors place their own pin, from a Google Maps link, from where they are standing,
               or by dropping it on the map themselves. So the point you navigate to is the door you
               walk through, not a guess made from an address.
             </p>
@@ -378,7 +378,7 @@ export default function HomePage() {
             <p className="mt-2 text-[15px] leading-7 text-slate-700">
               The assistant in {org.product} suggests which kind of doctor to see. It does not
               diagnose, treat, or give medical advice, and it is never a substitute for a qualified
-              professional. In an emergency call your local emergency number — in Lebanon that is
+              professional. In an emergency call your local emergency number. In Lebanon that is
               112 for police, 140 for the Red Cross ambulance and 125 for Civil Defence.
             </p>
           </div>

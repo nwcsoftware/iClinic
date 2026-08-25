@@ -42,7 +42,7 @@ export async function POST(request: Request) {
           resolved: false,
           google_maps_url: parsed.resolvedUrl,
           name: parsed.name,
-          reason: 'We could not read a position from that link. Place the pin on the map instead — it takes a second.',
+          reason: 'We could not read a position from that link. Place the pin on the map instead. It takes a second.',
         })
       }
 

@@ -15,7 +15,7 @@ function money(n: number): string {
 }
 
 function longDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return '-'
   return new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
@@ -93,7 +93,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
       const res = await billingAction(action, action === 'checkout' ? plan : undefined)
       if ((action === 'checkout' || action === 'portal')) {
         if (res.url) Linking.openURL(res.url)
-        else setError('Card payment is not set up yet — use the transfer details below.')
+        else setError('Card payment is not set up yet. Use the transfer details below.')
       } else {
         setConfirmCancel(false)
         await load()
@@ -259,7 +259,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
               {cap.test_mode ? (
                 <View style={styles.testBox}>
                   <Feather name="alert-triangle" size={14} color={colors.amber} />
-                  <Text style={styles.testText}>Test mode — no real money will be charged.</Text>
+                  <Text style={styles.testText}>Test mode. No real money will be charged.</Text>
                 </View>
               ) : null}
 
@@ -279,7 +279,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
               </Pressable>
               <Text style={styles.cardNote}>
                 {cap.recurring
-                  ? 'Visa, Mastercard, Amex, Apple Pay and Google Pay. Renews automatically each month — cancel any time.'
+                  ? 'Visa, Mastercard, Amex, Apple Pay and Google Pay. Renews automatically each month. Cancel any time.'
                   : 'Works with any Visa or Mastercard, including the free virtual Visa card in the Whish app.'}
               </Text>
             </>
