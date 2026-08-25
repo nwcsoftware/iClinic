@@ -456,20 +456,23 @@ export default function App() {
       <I18nProvider>
       <TourProvider>
       <StatusBar style="dark" />
+      {/* The overlay lives INSIDE the frame. Outside it, the ring's halo and
+          shadow spilled past the frame's rounded edge and the dim covered the
+          page around the phone rather than the app. It positions itself
+          against its own container, so window and frame both work. */}
       {framed ? (
         <View style={styles.frameOuter}>
           <View style={styles.frameInner}>
             <Main />
+            <SpotlightOverlay />
           </View>
         </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
           <Main />
+          <SpotlightOverlay />
         </View>
       )}
-      {/* Above the frame, so the dimmed area covers the whole window while the
-          hole still lines up with the measured control inside it. */}
-      <SpotlightOverlay />
       </TourProvider>
       </I18nProvider>
     </SafeAreaProvider>

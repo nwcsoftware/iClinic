@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, Pressable, StyleSheet, Platform, useWindowDimensions,
   AccessibilityInfo, type ViewStyle,
@@ -77,11 +77,24 @@ function holePath(w: number, h: number, r: Rect, radius: number) {
 }
 
 export default function SpotlightOverlay() {
-  const { active, step, index, total, next, skip, rect, remeasure } = useTour()
+  const { active, step, index, total, next, skip, rect: windowRect, remeasure } = useTour()
   const { t } = useI18n()
   const insets = useSafeAreaInsets()
-  const { width, height } = useWindowDimensions()
+  const { width: winW, height: winH } = useWindowDimensions()
   const [reduceMotion, setReduceMotion] = useState(false)
+
+  // Where this overlay sits, so targets measured against the window can be
+  // drawn against the container instead. On web the app is framed and centred,
+  // so the two differ; on a phone the overlay fills the screen and this is a
+  // no-op.
+  const rootRef = useRef<View | null>(null)
+  const [origin, setOrigin] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
+  const measureRoot = useCallback(() => {
+    rootRef.current?.measureInWindow((x, y, w, h) => {
+      if (w || h) setOrigin({ x, y, width: w, height: h })
+    })
+  }, [])
+  useEffect(() => { measureRoot() }, [winW, winH, active, measureRoot])
 
   useEffect(() => {
     let alive = true
@@ -93,9 +106,16 @@ export default function SpotlightOverlay() {
   }, [])
 
   // A rotation or resize moves the target, so measure again.
-  useEffect(() => { if (active) remeasure() }, [width, height, active, remeasure])
+  useEffect(() => { if (active) remeasure() }, [winW, winH, active, remeasure])
 
   if (!active || !step) return null
+
+  const width = origin?.width || winW
+  const height = origin?.height || winH
+  // Window coordinates translated into this container's space.
+  const rect: Rect | null = windowRect
+    ? { ...windowRect, x: windowRect.x - (origin?.x ?? 0), y: windowRect.y - (origin?.y ?? 0) }
+    : null
 
   const last = index + 1 >= total
   const transition = reduceMotion ? undefined : 'clip-path 320ms cubic-bezier(0.22, 1, 0.36, 1)'
@@ -144,7 +164,7 @@ export default function SpotlightOverlay() {
   const bubble = bubblePosition(rect, step.placement ?? 'auto', width, height, insets.top, insets.bottom)
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View ref={rootRef} onLayout={measureRoot} style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* Tapping anywhere advances. The whole layer is one button so there is
           no hunting for a "next" control. */}
       <Pressable
