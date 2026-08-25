@@ -259,19 +259,25 @@ function bubblePosition(
 // Only the dimmed layer is blurred; the hole is cut out of this same element,
 // so nothing blurs the spotlighted control.
 const webBlur = {
-  backdropFilter: 'blur(6px)',
-  WebkitBackdropFilter: 'blur(6px)',
+  backdropFilter: 'blur(9px)',
+  WebkitBackdropFilter: 'blur(9px)',
 } as unknown as ViewStyle
 
 const styles = StyleSheet.create({
-  // 0.62 keeps the dimmed UI recognisable while putting the contrast on the
-  // white message card, which sits well above 4.5:1 against it.
-  scrim: { backgroundColor: 'rgba(9, 16, 33, 0.62)' },
+  // Deep enough that the spotlight reads as lifted out of the page, still
+  // light enough to recognise what is behind. The white message card sits well
+  // above 4.5:1 against it.
+  scrim: { backgroundColor: 'rgba(9, 16, 33, 0.72)' },
   ring: {
     position: 'absolute',
     borderRadius: CORNER,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderColor: 'rgba(255,255,255,0.92)',
+    // Cast outward onto the dimmed page: a shadow around a sharp patch is what
+    // makes it read as raised above everything else rather than as a hole.
+    ...(isWeb
+      ? ({ boxShadow: '0 10px 34px rgba(0,0,0,0.45), 0 0 0 6px rgba(255,255,255,0.10)' } as object)
+      : { shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 }),
   },
   bubbleWrap: { position: 'absolute' },
   bubble: {

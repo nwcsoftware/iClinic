@@ -83,6 +83,43 @@ function radiusOf(e: Element): number {
   return parseFloat(v) || 0
 }
 
+/** Does this element put anything on screen, or is it only layout? */
+function paints(e: Element): boolean {
+  const cs = getComputedStyle(e)
+  if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') === 0) return false
+  const bg = cs.backgroundColor
+  const hasBg = !!bg && bg !== 'transparent' && !/^rgba\(0, 0, 0, 0\)$/.test(bg)
+  const hasBorder = ['borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth']
+    .some((k) => parseFloat(cs[k as 'borderTopWidth'] || '0') > 0)
+  const tag = e.tagName.toLowerCase()
+  const isMedia = tag === 'svg' || tag === 'img' || tag === 'canvas'
+  const isTextLeaf = e.children.length === 0 && (e.textContent || '').trim().length > 0
+  return hasBg || hasBorder || isMedia || isTextLeaf
+}
+
+/**
+ * The box the target actually fills with ink, rather than the space it was
+ * given. A tab occupies a ninety-pixel flex slot but paints an icon and a short
+ * label in the middle of it, so spotlighting the slot — and then adding a halo
+ * — reached into the neighbouring tabs and showed slivers of them. Never grows
+ * past the target's own box.
+ */
+function contentBox(el: Element, box: Rect): Rect | null {
+  let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity
+  for (const child of Array.from(el.querySelectorAll('*'))) {
+    if (!paints(child)) continue
+    const cr = child.getBoundingClientRect()
+    if (!cr.width || !cr.height) continue
+    l = Math.min(l, cr.left); t = Math.min(t, cr.top)
+    r = Math.max(r, cr.right); b = Math.max(b, cr.bottom)
+  }
+  if (!isFinite(l)) return null
+  l = Math.max(l, box.x); t = Math.max(t, box.y)
+  r = Math.min(r, box.x + box.width); b = Math.min(b, box.y + box.height)
+  if (r - l < 4 || b - t < 4) return null
+  return { x: l, y: t, width: r - l, height: b - t }
+}
+
 function readShape(node: unknown, box: Rect): Shape {
   const el = node as Element | null
   if (!el || typeof (el as { querySelectorAll?: unknown }).querySelectorAll !== 'function') return {}
@@ -98,8 +135,14 @@ function readShape(node: unknown, box: Rect): Shape {
     const rad = radiusOf(child)
     if (rad > 0 && (!best || rad > best.radius)) best = { r, radius: rad }
   }
-  if (!best) return {}
-  return { x: best.r.x, y: best.r.y, width: best.r.width, height: best.r.height, radius: best.radius }
+  if (best) {
+    return { x: best.r.x, y: best.r.y, width: best.r.width, height: best.r.height, radius: best.radius }
+  }
+
+  // Nothing carries a radius, so fall back to whatever the target actually
+  // paints. This is the case for the tab bar items.
+  const content = contentBox(el, box)
+  return content ? { ...content } : {}
 }
 
 type Registry = Map<string, View>
