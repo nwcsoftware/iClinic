@@ -486,7 +486,11 @@ const styles = StyleSheet.create({
     // The floating orb overhangs the top edge.
     overflow: 'visible',
   },
-  tabItem: { flex: 1 },
+  // Shared by the doctor tab bar, where the Pressable IS the slot, and by the
+  // patient one, where a <TourTarget> wrapper is the slot and the Pressable
+  // sits inside it. Both need the centring, so it lives on the slot style and
+  // is repeated on the inner one for the wrapped case.
+  tabItem: { flex: 1, alignItems: 'center', gap: 3 },
   tabItemInner: { alignItems: 'center', gap: 3 },
   tabIconWrap: {
     width: 46, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center',
