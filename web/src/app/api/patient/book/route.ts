@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBearerUser } from '@/lib/patient-auth'
 import { getRequestMeta } from '@/lib/request-meta'
 import { computeAvailableSlots } from '@/lib/slots'
+import { resolveVisitLocation } from '@/lib/locations'
 
 // POST /api/patient/book   (Bearer auth)
 // Body: { doctor_id, date (YYYY-MM-DD), start_time (HH:MM), reason?, triage_session_id? }
@@ -46,19 +47,32 @@ export async function POST(request: Request) {
 
     const { ip } = getRequestMeta(request)
 
-    const { data: appt, error: apptError } = await admin
-      .from('appointments')
-      .insert({
-        doctor_id,
-        patient_id: patient.id,
-        created_by: null,
-        booking_source: 'patient_app',
-        appointment_date: date,
-        start_time,
-        status: 'scheduled',
-        reason: reason ?? null,
-      })
-      .select().single()
+    // Where the visit happens is decided here, not sent by the client, so the
+    // stored location always matches the doctor's actual schedule for that day.
+    const visitLocation = await resolveVisitLocation(admin, doctor_id, date)
+
+    const row: Record<string, unknown> = {
+      doctor_id,
+      patient_id: patient.id,
+      created_by: null,
+      booking_source: 'patient_app',
+      appointment_date: date,
+      start_time,
+      status: 'scheduled',
+      reason: reason ?? null,
+    }
+    if (visitLocation) row.location_id = visitLocation.id
+
+    let { data: appt, error: apptError } = await admin
+      .from('appointments').insert(row).select().single()
+
+    // Migration 0009 not applied yet: book without the location rather than
+    // refusing the booking outright.
+    if (apptError && (apptError.code === '42703' || apptError.code === 'PGRST204')) {
+      delete row.location_id
+      ;({ data: appt, error: apptError } = await admin
+        .from('appointments').insert(row).select().single())
+    }
 
     if (apptError) {
       // Unique-slot constraint (migration 0003): someone booked this slot first.
@@ -80,7 +94,7 @@ export async function POST(request: Request) {
     })
 
     void ip
-    return NextResponse.json({ appointment: appt }, { status: 201 })
+    return NextResponse.json({ appointment: appt, location: visitLocation }, { status: 201 })
   } catch (err) {
     console.error('book error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

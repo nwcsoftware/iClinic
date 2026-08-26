@@ -34,6 +34,21 @@ export type TriageHistory = {
   summary: string
 }
 
+/** Where a visit takes place. Null when the doctor has not set up workplaces. */
+export type VisitLocation = {
+  id: string
+  name: string
+  type: 'hospital' | 'clinic' | 'private_clinic' | 'medical_center'
+  address: string | null
+  city: string | null
+  governorate: string | null
+  latitude: number | null
+  longitude: number | null
+  phone: string | null
+  formatted_address?: string | null
+  google_maps_url?: string | null
+}
+
 export type Appointment = {
   id: string
   doctor_id: string
@@ -46,6 +61,7 @@ export type Appointment = {
   my_rating?: number | null
   my_comment?: string | null
   can_review?: boolean
+  location?: VisitLocation | null
 }
 
 export type Review = {
@@ -240,10 +256,21 @@ export async function cancelAppointment(id: string) {
 
 // --- Available slots for a doctor on a date ---
 export async function getSlots(doctorId: string, date: string): Promise<string[]> {
+  return (await getSlotsWithLocation(doctorId, date)).slots
+}
+
+// Slots and the place the visit would be, in one request. Both depend on the
+// date — a doctor can be at the hospital on Monday and their own clinic on
+// Thursday — so they are answered together.
+export async function getSlotsWithLocation(
+  doctorId: string,
+  date: string,
+): Promise<{ slots: string[]; location: VisitLocation | null }> {
   const res = await fetch(`${API_URL}/api/patient/slots?doctor_id=${doctorId}&date=${date}`)
   const body = await jsonOrThrow(res)
-  return body.slots ?? []
+  return { slots: body.slots ?? [], location: body.location ?? null }
 }
+
 
 // --- Book an appointment ---
 export async function book(input: {
@@ -254,7 +281,7 @@ export async function book(input: {
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(input),
   })
-  return jsonOrThrow(res) as Promise<{ appointment: Appointment }>
+  return jsonOrThrow(res) as Promise<{ appointment: Appointment; location: VisitLocation | null }>
 }
 
 // One doctor by id, for jumping straight from a map marker into their profile.

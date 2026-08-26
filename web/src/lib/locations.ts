@@ -256,3 +256,88 @@ export async function findOrCreateLocation(
   if (!created) throw new Error('Could not save that location')
   return { location: created, reused: false, geocoded }
 }
+
+// ---------------------------------------------------------------------------
+// Where a visit will take place.
+//
+// A doctor can work at several places on different days, so the answer depends
+// on the date: Monday might be the hospital and Thursday the private clinic.
+// Resolved on the server for both the booking preview and the booking itself,
+// so the patient is shown exactly what gets stored.
+// ---------------------------------------------------------------------------
+
+export type VisitLocation = {
+  id: string
+  name: string
+  type: LocationType
+  address: string | null
+  city: string | null
+  governorate: string | null
+  latitude: number | null
+  longitude: number | null
+  phone: string | null
+  formatted_address?: string | null
+  google_maps_url?: string | null
+}
+
+/**
+ * The workplace a doctor is at on `date` (YYYY-MM-DD).
+ *
+ * Picks the one whose working days include that weekday. When a doctor has
+ * several that day, or none recorded, their primary workplace wins, so the
+ * patient is never shown "location unknown" for a doctor who has one.
+ * Returns null only when the doctor has no workplaces at all, which is the
+ * case for every doctor who has not set them up yet.
+ */
+type WorkplaceRow = {
+  is_primary: boolean
+  working_days: number[] | null
+  healthcare_locations: VisitLocation | null
+}
+
+/** Every workplace for the given doctors, in one query. */
+export async function loadWorkplaces(
+  admin: SupabaseClient,
+  doctorIds: string[],
+): Promise<Map<string, WorkplaceRow[]>> {
+  const byDoctor = new Map<string, WorkplaceRow[]>()
+  if (doctorIds.length === 0) return byDoctor
+
+  const { data, error } = await admin
+    .from('doctor_locations')
+    .select(`doctor_id, is_primary, working_days, healthcare_locations ( ${locationColumns()} )`)
+    .in('doctor_id', doctorIds)
+
+  // Migration 0009 not applied, or no workplaces: callers treat an empty map
+  // as "location not known", which the app renders rather than failing on.
+  if (error || !data) return byDoctor
+
+  for (const row of data as unknown as (WorkplaceRow & { doctor_id: string })[]) {
+    if (!row.healthcare_locations) continue
+    const list = byDoctor.get(row.doctor_id) ?? []
+    list.push(row)
+    byDoctor.set(row.doctor_id, list)
+  }
+  return byDoctor
+}
+
+/** Which of those workplaces the doctor is at on `date` (YYYY-MM-DD). */
+export function pickWorkplaceForDate(
+  rows: WorkplaceRow[] | undefined,
+  date: string,
+): VisitLocation | null {
+  if (!rows || rows.length === 0) return null
+  const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
+  const onThatDay = rows.filter((r) => (r.working_days ?? []).includes(weekday))
+  const pool = onThatDay.length > 0 ? onThatDay : rows
+  return (pool.find((r) => r.is_primary) ?? pool[0]).healthcare_locations
+}
+
+export async function resolveVisitLocation(
+  admin: SupabaseClient,
+  doctorId: string,
+  date: string,
+): Promise<VisitLocation | null> {
+  const byDoctor = await loadWorkplaces(admin, [doctorId])
+  return pickWorkplaceForDate(byDoctor.get(doctorId), date)
+}

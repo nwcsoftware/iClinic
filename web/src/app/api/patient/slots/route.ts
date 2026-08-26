@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeAvailableSlots } from '@/lib/slots'
+import { resolveVisitLocation } from '@/lib/locations'
 
 // GET /api/patient/slots?doctor_id=...&date=YYYY-MM-DD
 // Returns the bookable start times for a doctor on a date.
@@ -18,7 +19,10 @@ export async function GET(request: Request) {
 
     const admin = createAdminClient()
     const slots = await computeAvailableSlots(admin, doctorId, date)
-    return NextResponse.json({ slots })
+    // The same resolution the booking will use, so what the patient is shown
+    // before confirming is what ends up on the appointment.
+    const location = await resolveVisitLocation(admin, doctorId, date)
+    return NextResponse.json({ slots, location })
   } catch (err) {
     console.error('slots error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

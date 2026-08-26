@@ -8,6 +8,7 @@ import { getMyAppointments, cancelAppointment, submitReview, type Appointment } 
 import { colors, radius, statusColors, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
 import { Avatar, Badge, Card, EmptyState, GhostButton, StarRating } from '../components/ui'
+import VisitLocationCard from '../components/VisitLocationCard'
 import { FadeInUp } from '../components/motion'
 import { notify } from '../lib/notify'
 
@@ -110,6 +111,15 @@ export default function AppointmentsScreen({ onBook }: { onBook: () => void }) {
                     </View>
                   </View>
                   {a.reason ? <Text style={[type.sub, { marginTop: 8, fontStyle: 'italic' }]} numberOfLines={2}>“{a.reason}”</Text> : null}
+
+                  {/* Where to go. Shown for anything still upcoming even when
+                      the doctor has not set a place, because "not set yet" is
+                      the answer a patient needs before travelling. */}
+                  {isUpcoming(a) || a.location ? (
+                    <View style={{ marginTop: 10 }}>
+                      <VisitLocationCard place={a.location ?? null} compact />
+                    </View>
+                  ) : null}
 
                   {a.can_review ? (
                     <ReviewBlock appointment={a} onSaved={load} />

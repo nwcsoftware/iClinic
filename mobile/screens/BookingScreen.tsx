@@ -4,7 +4,8 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { getSlots, book, getDoctorReviews, type Doctor, type DoctorReviews } from '../lib/api'
+import { getSlotsWithLocation, book, getDoctorReviews, type Doctor, type DoctorReviews, type VisitLocation } from '../lib/api'
+import VisitLocationCard from '../components/VisitLocationCard'
 import { colors, radius, shadow, type } from '../lib/theme'
 import { useI18n } from '../lib/i18n'
 import { Avatar, PrimaryButton, Rating, StarRating, TopBar } from '../components/ui'
@@ -45,18 +46,25 @@ export default function BookingScreen({
   const [loadingSlots, setLoadingSlots] = useState(true)
   const [reason, setReason] = useState(initialReason)
   const [saving, setSaving] = useState(false)
-  const [booked, setBooked] = useState<{ date: string; slot: string } | null>(null)
+  const [booked, setBooked] = useState<{ date: string; slot: string; place: VisitLocation | null } | null>(null)
   const [reviews, setReviews] = useState<DoctorReviews | null>(null)
 
   useEffect(() => {
     getDoctorReviews(doctor.id).then(setReviews).catch(() => {})
   }, [doctor.id])
 
+  // Where the visit would be depends on the day the patient picks, so it is
+  // reloaded with the slots and shown before they confirm rather than after.
+  const [place, setPlace] = useState<VisitLocation | null>(null)
+
   const loadSlots = useCallback(async (date: string) => {
     setLoadingSlots(true)
     setSelectedSlot(null)
-    try { setSlots(await getSlots(doctor.id, date)) }
-    catch { setSlots([]) }
+    try {
+      const { slots: open, location } = await getSlotsWithLocation(doctor.id, date)
+      setSlots(open)
+      setPlace(location)
+    } catch { setSlots([]); setPlace(null) }
     finally { setLoadingSlots(false) }
   }, [doctor.id])
 
@@ -66,8 +74,10 @@ export default function BookingScreen({
     if (!selectedSlot) return
     setSaving(true)
     try {
-      await book({ doctor_id: doctor.id, date: selectedDate, start_time: selectedSlot, reason: reason || undefined })
-      setBooked({ date: selectedDate, slot: selectedSlot })
+      const res = await book({ doctor_id: doctor.id, date: selectedDate, start_time: selectedSlot, reason: reason || undefined })
+      // The booking response carries the location that was actually stored,
+      // which is the one worth showing.
+      setBooked({ date: selectedDate, slot: selectedSlot, place: res.location ?? place })
     } catch (e) {
       notify(t('booking.failed'), e instanceof Error ? e.message : undefined)
       loadSlots(selectedDate)
@@ -90,6 +100,9 @@ export default function BookingScreen({
               {doctor.full_name}{'\n'}
               {new Date(`${booked.date}T00:00:00`).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })} at {booked.slot}
             </Text>
+            <View style={{ alignSelf: 'stretch', marginTop: 18 }}>
+              <VisitLocationCard place={booked.place} />
+            </View>
             <PrimaryButton label={t('booking.viewVisits')} onPress={onDone} style={{ marginTop: 24, alignSelf: 'stretch' }} />
           </View>
         </FadeInUp>
@@ -183,6 +196,11 @@ export default function BookingScreen({
           onChangeText={setReason}
           multiline
         />
+        {/* Where the visit will be, so it is known before confirming */}
+        <FadeInUp delay={140}>
+          <Text style={[type.label, { marginTop: 22, marginBottom: 8 }]}>Where</Text>
+          <VisitLocationCard place={place} />
+        </FadeInUp>
       </ScrollView>
 
       {/* Confirm bar */}
