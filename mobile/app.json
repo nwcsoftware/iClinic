@@ -29,6 +29,9 @@
       "display": "standalone"
     },
     "scheme": "iclinic",
-    "primaryColor": "#3056D3"
+    "primaryColor": "#3056D3",
+    "plugins": [
+      "@maplibre/maplibre-react-native"
+    ]
   }
 }
