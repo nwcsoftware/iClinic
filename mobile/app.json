@@ -1,20 +1,24 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "iClinic",
+    "slug": "iclinic",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icons/icon-1024.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "health.iclinic.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/icon-1024.png",
         "backgroundColor": "#3056D3"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "health.iclinic.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/icons/icon-192.png",
@@ -23,6 +27,8 @@
       "themeColor": "#3056D3",
       "backgroundColor": "#3056D3",
       "display": "standalone"
-    }
+    },
+    "scheme": "iclinic",
+    "primaryColor": "#3056D3"
   }
 }
