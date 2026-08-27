@@ -32,6 +32,12 @@
     "primaryColor": "#3056D3",
     "plugins": [
       "@maplibre/maplibre-react-native"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "144f78d7-108c-405d-8c3a-af5e10e089a5"
+      }
+    },
+    "owner": "jadchami"
   }
 }
