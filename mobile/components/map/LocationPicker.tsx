@@ -4,6 +4,7 @@ import {
 } from 'react-native'
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import { resolveLocation, type ResolvedLocation, type LocationSource } from '../../lib/mapApi'
+import { getCurrentLocation } from '../../lib/geolocate'
 import { colors, radius, shadow, type } from '../../lib/theme'
 import MapPointPicker from './MapPointPicker'
 
@@ -81,31 +82,29 @@ export default function LocationPicker({
     }
   }, [])
 
-  function useCurrentLocation() {
+  async function useCurrentLocation() {
     setError('')
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setError('This device cannot share its location. Try one of the other options.')
-      return
-    }
     setBusy(true)
     // Permission is only requested here — after an explicit tap, never on load.
-    navigator.geolocation.getCurrentPosition(
-      (pos) => run({
-        mode: 'current_location',
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-      }),
-      (err) => {
-        setBusy(false)
-        setError(
-          err.code === 1
-            ? 'Location permission was denied. Paste a Google Maps link or drop the pin instead.'
-            : 'Could not get your location. Try another option.',
-        )
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    )
+    // getCurrentLocation is split by platform: the browser has
+    // navigator.geolocation, a phone does not, and the caller never finds out.
+    const res = await getCurrentLocation()
+    if (!res.ok) {
+      setBusy(false)
+      setError(
+        res.reason === 'denied'
+          ? 'Location permission was denied. Paste a Google Maps link or drop the pin instead.'
+          : 'Could not get your location. Try another option.',
+      )
+      return
+    }
+    run({
+      mode: 'current_location',
+      latitude: res.fix.latitude,
+      longitude: res.fix.longitude,
+    })
   }
+
 
   function confirm() {
     if (!pin) return

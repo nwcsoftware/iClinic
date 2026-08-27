@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
-import { Map as MapLibreMap, Camera, Marker, type CameraRef } from '@maplibre/maplibre-react-native'
+import { Map as MapLibreMap, Camera, Marker, UserLocation, type CameraRef } from '@maplibre/maplibre-react-native'
 import { LEBANON_BOUNDS, type MapLocation } from '../../lib/mapApi'
 import { colors } from '../../lib/theme'
 
@@ -69,15 +69,23 @@ function Pin({ hospital, selected, count }: { hospital: boolean; selected: boole
 }
 
 export default function MapLibreView({
-  locations, selectedId, onSelect, onReady, focus,
+  locations, selectedId, onSelect, onReady, focus, showUser,
 }: {
   locations: MapLocation[]
   selectedId: string | null
   onSelect: (loc: MapLocation | null) => void
   onReady?: () => void
   focus?: { lat: number; lng: number; zoom?: number } | null
+  /** Draw the blue dot once the user has asked to be located. */
+  showUser?: boolean
 }) {
   const camera = useRef<CameraRef | null>(null)
+
+  // A tap on a pin also reaches the map underneath it, and the map's own
+  // handler clears the selection — so the sheet opened and shut in the same
+  // gesture and no doctors were ever seen. The marker records when it was
+  // pressed and the map ignores anything that lands right behind it.
+  const markerPressedAt = useRef(0)
 
   // Only places with coordinates can be drawn; the rest are still listed in
   // the sheet, they simply have no pin.
@@ -104,18 +112,31 @@ export default function MapLibreView({
         attributionPosition={{ bottom: 8, right: 8 }}
         onDidFinishLoadingMap={onReady}
         // Tapping bare map closes the sheet, matching the web build.
-        onPress={() => onSelect(null)}
+        onPress={() => {
+          if (Date.now() - markerPressedAt.current < 350) return
+          onSelect(null)
+        }}
       >
         <Camera
           ref={camera}
-          // The whole country in view on first paint, same as the web build.
+          // The whole country in view on first paint, and no way to wander off
+          // it: this map is only ever about Lebanon, so panning to the Atlantic
+          // or zooming out to the globe is nothing but a way to get lost.
           initialViewState={{
             bounds: [
               LEBANON_BOUNDS[0][0], LEBANON_BOUNDS[0][1],
               LEBANON_BOUNDS[1][0], LEBANON_BOUNDS[1][1],
             ],
           }}
+          maxBounds={[
+            LEBANON_BOUNDS[0][0], LEBANON_BOUNDS[0][1],
+            LEBANON_BOUNDS[1][0], LEBANON_BOUNDS[1][1],
+          ]}
+          minZoom={7}
+          maxZoom={18}
         />
+
+        {showUser ? <UserLocation /> : null}
 
         {pinned.map((loc) => (
           <Marker
@@ -123,7 +144,7 @@ export default function MapLibreView({
             id={loc.id}
             lngLat={[loc.longitude, loc.latitude]}
             anchor="bottom"
-            onPress={() => onSelect(loc)}
+            onPress={() => { markerPressedAt.current = Date.now(); onSelect(loc) }}
           >
             <Pin
               hospital={loc.type === 'hospital'}

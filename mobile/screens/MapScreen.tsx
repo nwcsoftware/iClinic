@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, TextInput, Pressable, StyleSheet, Animated, Platform, Easing, ScrollView,
+  ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Feather } from '@expo/vector-icons'
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors, radius, shadow, type } from '../lib/theme'
 import { getMapLocations, type MapLocation } from '../lib/mapApi'
 import MapLibreView from '../components/map/MapLibreView'
 import HealthcareLocationSheet from '../components/map/HealthcareLocationSheet'
+import { getCurrentLocation } from '../lib/geolocate'
+import { notify } from '../lib/notify'
 import MapFilterChips, { type MapFilter } from '../components/map/MapFilterChips'
 
 // The Lebanon healthcare map.
@@ -95,6 +98,33 @@ export default function MapScreen({
     setFocus({ lat: loc.latitude, lng: loc.longitude, zoom: 15 })
   }, [])
 
+  // Finding yourself on the map. Permission is only ever asked for after a
+  // deliberate tap, never on load, because a map that demands your location
+  // before showing you anything is a map people close.
+  const [locating, setLocating] = useState(false)
+  const [showUser, setShowUser] = useState(false)
+
+  async function locateMe() {
+    setLocating(true)
+    try {
+      const res = await getCurrentLocation()
+      if (!res.ok) {
+        notify(
+          res.reason === 'denied' ? 'Location is off' : 'Could not find you',
+          res.reason === 'denied'
+            ? 'Allow location access to see where you are on the map.'
+            : 'Your position was not available. Check that location is switched on.',
+        )
+        return
+      }
+      setShowUser(true)
+      setSelected(null)
+      setFocus({ lat: res.fix.latitude, lng: res.fix.longitude, zoom: 13 })
+    } finally {
+      setLocating(false)
+    }
+  }
+
   const chipTop = Math.max(insets.top, Platform.OS === 'web' ? 16 : 12) + 68
 
   return (
@@ -104,6 +134,7 @@ export default function MapScreen({
         selectedId={selected?.id ?? null}
         onSelect={(loc) => (loc ? choose(loc) : setSelected(null))}
         focus={focus}
+        showUser={showUser}
       />
 
       {/* Search */}
@@ -184,6 +215,25 @@ export default function MapScreen({
         </View>
       ) : null}
 
+      {/* Find me. Sits above the count pill so neither covers the other. */}
+      {!selected && !showResults ? (
+        <Pressable
+          onPress={locateMe}
+          disabled={locating}
+          accessibilityRole="button"
+          accessibilityLabel="Show my location"
+          style={({ pressed }) => [
+            styles.locateBtn,
+            { bottom: Math.max(insets.bottom, 16) + 62 },
+            pressed && { transform: [{ scale: 0.94 }] },
+          ]}
+        >
+          {locating
+            ? <ActivityIndicator size="small" color={colors.brand} />
+            : <MaterialCommunityIcons name="crosshairs-gps" size={21} color={colors.brand} />}
+        </Pressable>
+      ) : null}
+
       {/* Count pill — quiet confirmation that filters did something */}
       {!loading && all.length > 0 && !selected && !showResults ? (
         <View style={[styles.countPill, { bottom: Math.max(insets.bottom, 16) + 16 }]} pointerEvents="none">
@@ -204,6 +254,14 @@ export default function MapScreen({
 }
 
 const styles = StyleSheet.create({
+  locateBtn: {
+    position: 'absolute', right: 16,
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: colors.card,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    ...shadow.raised,
+  },
   root: { flex: 1, backgroundColor: colors.bg },
   searchWrap: {
     position: 'absolute', left: 0, right: 0, zIndex: 25,
