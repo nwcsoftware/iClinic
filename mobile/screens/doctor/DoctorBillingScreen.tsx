@@ -9,6 +9,7 @@ import { colors, radius, shadow, type } from '../../lib/theme'
 import { Card, TopBar } from '../../components/ui'
 import { DoctorAmbient, FadeInUp } from '../../components/motion'
 import ReportPaymentForm from '../../components/ReportPaymentForm'
+import { CAN_SELL_IN_APP } from '../../lib/purchases'
 
 function money(n: number): string {
   return `$${Number(n).toFixed(2)}`
@@ -144,10 +145,15 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.planKicker}>{heading}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 6 }}>
-                  <Text style={styles.planPrice}>{money(sub?.price_usd ?? access?.price_usd ?? 9.99)}</Text>
-                  <Text style={styles.planPer}> / {sub?.plan === 'yearly' ? 'year' : 'month'}</Text>
-                </View>
+                {/* An amount, even for a subscription already held, reads as a
+                    price where the app is not allowed to sell. The status it
+                    describes is shown either way, just without the figure. */}
+                {CAN_SELL_IN_APP ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 6 }}>
+                    <Text style={styles.planPrice}>{money(sub?.price_usd ?? access?.price_usd ?? 9.99)}</Text>
+                    <Text style={styles.planPer}> / {sub?.plan === 'yearly' ? 'year' : 'month'}</Text>
+                  </View>
+                ) : null}
               </View>
               <View style={styles.planIcon}>
                 <Feather name={isTrial ? 'gift' : access?.has_access ? 'check' : 'lock'} size={17} color="#fff" />
@@ -166,11 +172,17 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
               </Text>
             ) : info?.next_charge ? (
               <Text style={styles.planLine}>
-                Next charge {money(info.next_charge.amount_usd)} on {longDate(info.next_charge.date)}
+                {CAN_SELL_IN_APP
+                  ? `Next charge ${money(info.next_charge.amount_usd)} on ${longDate(info.next_charge.date)}`
+                  : `Renews on ${longDate(info.next_charge.date)}`}
               </Text>
             ) : (
               <Text style={styles.planLine}>
-                {access?.has_access ? `Active until ${longDate(sub?.current_period_end)}` : 'Subscribe to appear in the patient app'}
+                {access?.has_access
+                  ? `Active until ${longDate(sub?.current_period_end)}`
+                  : CAN_SELL_IN_APP
+                    ? 'Subscribe to appear in the patient app'
+                    : 'Not active, so patients cannot see you'}
               </Text>
             )}
           </View>
@@ -225,7 +237,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
 
         {/* ── Actions ──────────────────────────────────────────────────────── */}
         <FadeInUp delay={110}>
-          {cap?.can_pay_by_card ? (
+          {CAN_SELL_IN_APP && cap?.can_pay_by_card ? (
             <>
               {info?.plans?.length && !cap.recurring ? (
                 <View style={{ marginTop: 20 }}>
@@ -285,7 +297,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
             </>
           ) : null}
 
-          {sub ? (
+          {CAN_SELL_IN_APP && sub ? (
             canceling ? (
               <Pressable
                 onPress={() => run('resume')}
@@ -324,7 +336,7 @@ export default function DoctorBillingScreen({ onBack }: { onBack: () => void }) 
         </FadeInUp>
 
         {/* ── How to pay (manual rails) ────────────────────────────────────── */}
-        {inst?.whish || inst?.omt || inst?.bank ? (
+        {CAN_SELL_IN_APP && (inst?.whish || inst?.omt || inst?.bank) ? (
           <FadeInUp delay={150}>
             <Card style={{ marginTop: 16 }}>
               <Text style={type.h2}>Other ways to pay</Text>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CAN_SELL_IN_APP } from '../lib/purchases'
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { reportPayment } from '../lib/doctorApi'
@@ -19,6 +20,11 @@ export default function ReportPaymentForm({
   plans: { key: string; months: number; amount_usd: number; label: string }[]
   onDone?: () => void
 }) {
+  // Refuses to render where the app may not sell, rather than trusting every
+  // screen that embeds it to remember. Reporting a payment made elsewhere is
+  // part of a purchase flow, so it belongs behind the same gate as the rest.
+  if (!CAN_SELL_IN_APP) return null
+
   const [open, setOpen] = useState(false)
   const [method, setMethod] = useState<typeof METHODS[number]['key']>('whish')
   const [plan, setPlan] = useState(plans[0]?.key ?? 'm1')

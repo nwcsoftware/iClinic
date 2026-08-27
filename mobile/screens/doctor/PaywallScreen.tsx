@@ -10,6 +10,7 @@ import { colors, radius, shadow, type } from '../../lib/theme'
 import { Card } from '../../components/ui'
 import { DoctorAmbient, FadeInUp, ScaleIn } from '../../components/motion'
 import ReportPaymentForm from '../../components/ReportPaymentForm'
+import { CAN_SELL_IN_APP } from '../../lib/purchases'
 
 const PERKS = [
   'Appear in the patient app and chatbot results',
@@ -80,10 +81,19 @@ export default function PaywallScreen({
 
         <FadeInUp delay={70}>
           <View style={styles.priceCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-              <Text style={styles.price}>${price.toFixed(2)}</Text>
-              <Text style={styles.per}> / month</Text>
-            </View>
+            {/* The amount is a purchase surface, so it only appears where the
+                app is allowed to sell. The perks are just a description of the
+                product and stay everywhere. */}
+            {CAN_SELL_IN_APP ? (
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                <Text style={styles.price}>${price.toFixed(2)}</Text>
+                <Text style={styles.per}> / month</Text>
+              </View>
+            ) : (
+              <Text style={[styles.per, { textAlign: 'center', fontSize: 15 }]}>
+                What an active subscription includes
+              </Text>
+            )}
             <View style={{ marginTop: 16, gap: 10 }}>
               {PERKS.map((p) => (
                 <View key={p} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
@@ -99,7 +109,7 @@ export default function PaywallScreen({
           <ActivityIndicator color={colors.doc} style={{ marginTop: 28 }} />
         ) : (
           <>
-            {info?.checkout_url ? (
+            {CAN_SELL_IN_APP && info?.checkout_url ? (
               <FadeInUp delay={120}>
                 <Pressable
                   onPress={() => Linking.openURL(info.checkout_url as string)}
@@ -111,6 +121,7 @@ export default function PaywallScreen({
               </FadeInUp>
             ) : null}
 
+            {CAN_SELL_IN_APP ? (
             <FadeInUp delay={150}>
               <Card style={{ marginTop: 16 }}>
                 <Text style={type.h2}>How to pay</Text>
@@ -139,6 +150,18 @@ export default function PaywallScreen({
                 <ReportPaymentForm plans={info?.plans ?? []} />
               </Card>
             </FadeInUp>
+            ) : (
+              // Reader mode: state the fact, name no price, point nowhere.
+              <FadeInUp delay={150}>
+                <Card style={{ marginTop: 16 }}>
+                  <Text style={type.h2}>Access is not active</Text>
+                  <Text style={[type.sub, { marginTop: 8 }]}>
+                    Your subscription is managed on your iClinic account, outside this app.
+                    As soon as it is active everything here unlocks on its own.
+                  </Text>
+                </Card>
+              </FadeInUp>
+            )}
 
             <FadeInUp delay={200}>
               <Pressable
@@ -151,7 +174,9 @@ export default function PaywallScreen({
                   : (
                     <>
                       <Feather name="refresh-cw" size={16} color={colors.doc} />
-                      <Text style={styles.refreshText}>I&apos;ve paid, check again</Text>
+                      <Text style={styles.refreshText}>
+                        {CAN_SELL_IN_APP ? 'I’ve paid, check again' : 'Check again'}
+                      </Text>
                     </>
                   )}
               </Pressable>

@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { signOut } from '../../lib/supabase'
 import { colors, radius, type } from '../../lib/theme'
+import { CAN_SELL_IN_APP } from '../../lib/purchases'
 import { Avatar, Card, Rating } from '../../components/ui'
 import { DoctorAmbient, FadeInUp } from '../../components/motion'
 import { getSubscription, type DoctorMe, type Access } from '../../lib/doctorApi'
@@ -60,12 +61,16 @@ export default function DoctorProfileScreen({
                       : renews ? `Renews ${renews}` : 'Active'}
                   </Text>
                 </View>
-                <Text style={styles.subPrice}>${access.price_usd.toFixed(2)}/mo</Text>
+                {CAN_SELL_IN_APP
+                  ? <Text style={styles.subPrice}>${access.price_usd.toFixed(2)}/mo</Text>
+                  : null}
                 <Feather name="chevron-right" size={18} color={colors.textFaint} />
               </View>
               {access.is_trial && access.days_left <= 5 ? (
                 <Text style={[type.sub, { marginTop: 12, color: colors.amber }]}>
-                  Your trial ends soon. Subscribe to stay visible to patients.
+                  {CAN_SELL_IN_APP
+                    ? 'Your trial ends soon. Subscribe to stay visible to patients.'
+                    : 'Your trial ends soon. Patients stop seeing you once it does.'}
                 </Text>
               ) : null}
             </Card>

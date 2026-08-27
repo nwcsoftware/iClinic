@@ -7,6 +7,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors, radius, shadow, type } from '../lib/theme'
 import { AmbientBackground, FadeInUp } from '../components/motion'
 import { CONTACT, type Policy } from '../lib/policies'
+import { CAN_SELL_IN_APP } from '../lib/purchases'
 
 // The first screen anyone reaching iClinic sees when signed out.
 //
@@ -166,13 +167,18 @@ export default function LandingScreen({
                 ))}
               </View>
 
-              <Pressable
-                onPress={() => Linking.openURL(`${WEB_URL}/register`)}
-                style={({ pressed }) => [styles.docCta, pressed && { backgroundColor: '#EEF1FC' }]}
-              >
-                <Text style={styles.docCtaText}>Create a doctor account</Text>
-                <Feather name="arrow-up-right" size={16} color={colors.docDark} />
-              </Pressable>
+              {/* Sending someone out to sign up is a step on the way to a
+                  subscription, so it is not offered where the app may not sell.
+                  Doctors who already have an account still sign in normally. */}
+              {CAN_SELL_IN_APP ? (
+                <Pressable
+                  onPress={() => Linking.openURL(`${WEB_URL}/register`)}
+                  style={({ pressed }) => [styles.docCta, pressed && { backgroundColor: '#EEF1FC' }]}
+                >
+                  <Text style={styles.docCtaText}>Create a doctor account</Text>
+                  <Feather name="arrow-up-right" size={16} color={colors.docDark} />
+                </Pressable>
+              ) : null}
             </View>
           </FadeInUp>
 
