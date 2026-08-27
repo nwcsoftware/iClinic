@@ -4,11 +4,11 @@ import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { I18nProvider, useI18n } from './lib/i18n'
-import { supabase } from './lib/supabase'
+import { supabase, configError } from './lib/supabase'
 import { getDoctorById, type Doctor, type PatientInfo } from './lib/api'
 import { type DoctorMe } from './lib/doctorApi'
 import { getMe } from './lib/session'
-import { colors, shadow } from './lib/theme'
+import { colors, shadow, type } from './lib/theme'
 import SplashScreen from './components/SplashScreen'
 import AuthScreen from './screens/AuthScreen'
 import LandingScreen from './screens/LandingScreen'
@@ -144,7 +144,26 @@ function PatientTabBar({
   )
 }
 
+// A build made without its environment variables cannot talk to anything, so
+// say which one is missing rather than opening and closing in silence.
+function ConfigError({ missing }: { missing: string }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+      <Feather name="alert-triangle" size={34} color={colors.amber} />
+      <Text style={[type.h1, { marginTop: 16, textAlign: 'center' }]}>This build is missing its settings</Text>
+      <Text style={[type.sub, { marginTop: 10, textAlign: 'center' }]}>
+        It was built without: {missing}
+      </Text>
+      <Text style={[type.small, { marginTop: 14, textAlign: 'center' }]}>
+        Set them on the build profile and build again.
+      </Text>
+    </View>
+  )
+}
+
 function Main() {
+  if (configError) return <ConfigError missing={configError} />
+
   const [phase, setPhase] = useState<Phase>('splash')
   const [pTab, setPTab] = useState<PatientTab>('home')
   const [dTab, setDTab] = useState<DoctorTab>('dhome')
