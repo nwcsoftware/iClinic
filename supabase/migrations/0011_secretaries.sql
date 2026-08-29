@@ -41,11 +41,9 @@ begin;
 -- 2. The doctor link, extended
 --
 --    receptionist_doctor_assignments already exists with id, receptionist_id,
---    doctor_id, is_active and created_at. It only needs to record who created
---    the row, for the doctor's own activity view.
+--    doctor_id, is_active, created_at and assigned_by, which is NOT NULL and
+--    already records who made the link. Nothing to add but indexes.
 -- ----------------------------------------------------------------------------
-alter table public.receptionist_doctor_assignments
-  add column if not exists created_by uuid references public.profiles(id) on delete set null;
 
 create index if not exists rda_doctor_idx
   on public.receptionist_doctor_assignments(doctor_id);

@@ -177,7 +177,7 @@ export async function POST(request: Request) {
 
     const { data: link, error: linkError } = await admin
       .from('receptionist_doctor_assignments')
-      .insert({ doctor_id: doctor.id, receptionist_id: secretaryId, created_by: doctor.id })
+      .insert({ doctor_id: doctor.id, receptionist_id: secretaryId, assigned_by: doctor.id })
       .select('id').single()
 
     if (linkError) {
