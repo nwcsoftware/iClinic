@@ -13,6 +13,10 @@ import { getBearerUser } from './patient-auth'
 // The checks live here rather than in each route so a new endpoint cannot
 // forget one. Routes call requireSecretary, then one of the assert helpers,
 // and only then read data.
+//
+// "Secretary" is the word in the interface; `receptionist` is the value in the
+// database, because the role already existed under that name and renaming it
+// would break the pages already using it. Same job, one role.
 // ---------------------------------------------------------------------------
 
 export type SecretaryProfile = {
@@ -64,7 +68,7 @@ export async function requireSecretary(
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!data || data.role !== 'secretary' || !data.is_active) return null
+  if (!data || data.role !== 'receptionist' || !data.is_active) return null
   return {
     id: data.id as string,
     full_name: data.full_name as string,
@@ -80,11 +84,11 @@ export async function worksForDoctor(
   doctorId: string,
 ): Promise<boolean> {
   const { data } = await admin
-    .from('doctor_secretaries')
+    .from('receptionist_doctor_assignments')
     .select('id')
-    .eq('secretary_id', secretaryId)
+    .eq('receptionist_id', secretaryId)
     .eq('doctor_id', doctorId)
-    .eq('status', 'active')
+    .eq('is_active', true)
     .maybeSingle()
   return !!data
 }
@@ -105,16 +109,16 @@ export async function mayUseLocation(
 ): Promise<boolean> {
   if (!locationId) return false
   const { data } = await admin
-    .from('doctor_secretaries')
-    .select('id, doctor_secretary_locations ( doctor_locations ( location_id ) )')
-    .eq('secretary_id', secretaryId)
+    .from('receptionist_doctor_assignments')
+    .select('id, receptionist_location_grants ( doctor_locations ( location_id ) )')
+    .eq('receptionist_id', secretaryId)
     .eq('doctor_id', doctorId)
-    .eq('status', 'active')
+    .eq('is_active', true)
     .maybeSingle()
 
   if (!data) return false
-  type Row = { doctor_secretary_locations?: { doctor_locations?: { location_id: string } | null }[] }
-  const grants = (data as unknown as Row).doctor_secretary_locations ?? []
+  type Row = { receptionist_location_grants?: { doctor_locations?: { location_id: string } | null }[] }
+  const grants = (data as unknown as Row).receptionist_location_grants ?? []
   return grants.some((g) => g.doctor_locations?.location_id === locationId)
 }
 
@@ -124,13 +128,13 @@ export async function listDoctors(
   secretaryId: string,
 ): Promise<LinkedDoctor[]> {
   const { data } = await admin
-    .from('doctor_secretaries')
-    .select('id, status, doctor_id, profiles!doctor_secretaries_doctor_id_fkey ( full_name, specialty, avatar_url )')
-    .eq('secretary_id', secretaryId)
-    .eq('status', 'active')
+    .from('receptionist_doctor_assignments')
+    .select('id, is_active, doctor_id, profiles!receptionist_doctor_assignments_doctor_id_fkey ( full_name, specialty, avatar_url )')
+    .eq('receptionist_id', secretaryId)
+    .eq('is_active', true)
 
   type Row = {
-    id: string; status: 'active' | 'inactive'; doctor_id: string
+    id: string; is_active: boolean; doctor_id: string
     profiles: { full_name: string; specialty: string | null; avatar_url: string | null } | null
   }
   return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -139,7 +143,7 @@ export async function listDoctors(
     full_name: r.profiles?.full_name ?? 'Doctor',
     specialty: r.profiles?.specialty ?? null,
     avatar_url: r.profiles?.avatar_url ?? null,
-    status: r.status,
+    status: r.is_active ? 'active' : 'inactive',
   }))
 }
 
@@ -155,19 +159,19 @@ export async function listGrantedLocations(
   doctorId: string,
 ): Promise<GrantedLocation[]> {
   const { data } = await admin
-    .from('doctor_secretaries')
+    .from('receptionist_doctor_assignments')
     .select(`
       id,
-      doctor_secretary_locations (
+      receptionist_location_grants (
         doctor_locations (
           id, location_id, working_days, working_hours, appointment_duration,
           healthcare_locations ( id, name, type, city, address )
         )
       )
     `)
-    .eq('secretary_id', secretaryId)
+    .eq('receptionist_id', secretaryId)
     .eq('doctor_id', doctorId)
-    .eq('status', 'active')
+    .eq('is_active', true)
     .maybeSingle()
 
   if (!data) return []
@@ -180,9 +184,9 @@ export async function listGrantedLocations(
     appointment_duration: number | null
     healthcare_locations: Place | null
   }
-  type Row = { doctor_secretary_locations?: { doctor_locations: DocLoc | null }[] }
+  type Row = { receptionist_location_grants?: { doctor_locations: DocLoc | null }[] }
 
-  const grants = (data as unknown as Row).doctor_secretary_locations ?? []
+  const grants = (data as unknown as Row).receptionist_location_grants ?? []
   return grants
     .map((g) => g.doctor_locations)
     .filter((dl): dl is DocLoc => !!dl && !!dl.healthcare_locations)
@@ -230,8 +234,23 @@ export async function auditSecretary(
   }
 }
 
-/** Statuses a secretary is allowed to set. All administrative, none medical. */
+/**
+ * Statuses a secretary may set. All administrative, none medical.
+ *
+ * `no_show` is the enum's existing name for "not completed" — the patient did
+ * not come — so it is reused rather than adding a second value meaning the
+ * same thing. NOT_COMPLETED gives the interface its label without a second
+ * database value to keep in step.
+ */
 export const SECRETARY_STATUSES = [
-  'scheduled', 'confirmed', 'completed', 'not_completed', 'cancelled',
+  'scheduled', 'confirmed', 'completed', 'no_show', 'cancelled',
 ] as const
+
+export const STATUS_LABEL: Record<SecretaryStatus, string> = {
+  scheduled: 'Scheduled',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  no_show: 'Not completed',
+  cancelled: 'Cancelled',
+}
 export type SecretaryStatus = (typeof SECRETARY_STATUSES)[number]

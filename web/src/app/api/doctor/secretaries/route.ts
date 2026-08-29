@@ -22,15 +22,13 @@ import { getRequestMeta } from '@/lib/request-meta'
 
 const MAX_SECRETARIES = 3
 
-type Grant = { doctor_location_id: string }
-
 async function loadSecretaries(admin: ReturnType<typeof createAdminClient>, doctorId: string) {
   const { data, error } = await admin
-    .from('doctor_secretaries')
+    .from('receptionist_doctor_assignments')
     .select(`
-      id, status, created_at, secretary_id,
-      profiles!doctor_secretaries_secretary_id_fkey ( full_name, phone, is_active ),
-      doctor_secretary_locations (
+      id, is_active, created_at, receptionist_id,
+      profiles!receptionist_doctor_assignments_receptionist_id_fkey ( full_name, phone, is_active ),
+      receptionist_location_grants (
         id, doctor_location_id,
         doctor_locations ( id, location_id, healthcare_locations ( name, type, city ) )
       )
@@ -41,9 +39,9 @@ async function loadSecretaries(admin: ReturnType<typeof createAdminClient>, doct
   if (error) return { rows: null, error }
 
   type Row = {
-    id: string; status: string; created_at: string; secretary_id: string
+    id: string; is_active: boolean; created_at: string; receptionist_id: string
     profiles: { full_name: string; phone: string | null; is_active: boolean } | null
-    doctor_secretary_locations: {
+    receptionist_location_grants: {
       id: string; doctor_location_id: string
       doctor_locations: {
         id: string; location_id: string
@@ -54,13 +52,13 @@ async function loadSecretaries(admin: ReturnType<typeof createAdminClient>, doct
 
   const rows = ((data ?? []) as unknown as Row[]).map((r) => ({
     id: r.id,
-    secretary_id: r.secretary_id,
+    receptionist_id: r.receptionist_id,
     full_name: r.profiles?.full_name ?? 'Secretary',
     phone: r.profiles?.phone ?? null,
     account_active: r.profiles?.is_active ?? true,
-    status: r.status,
+    status: r.is_active ? 'active' : 'inactive',
     created_at: r.created_at,
-    locations: (r.doctor_secretary_locations ?? [])
+    locations: (r.receptionist_location_grants ?? [])
       .filter((g) => g.doctor_locations)
       .map((g) => ({
         grant_id: g.id,
@@ -129,7 +127,7 @@ export async function POST(request: Request) {
 
     // Checked here for a readable message; the database enforces it too.
     const { count } = await admin
-      .from('doctor_secretaries')
+      .from('receptionist_doctor_assignments')
       .select('id', { count: 'exact', head: true })
       .eq('doctor_id', doctor.id)
     if ((count ?? 0) >= MAX_SECRETARIES) {
@@ -142,9 +140,9 @@ export async function POST(request: Request) {
     // An existing secretary may already work for another doctor. Reuse that
     // account rather than making them a second login for the same job.
     const { data: existingProfile } = await admin
-      .from('profiles').select('id, role').eq('id', body.secretary_id ?? '00000000-0000-0000-0000-000000000000').maybeSingle()
+      .from('profiles').select('id, role').eq('id', body.receptionist_id ?? '00000000-0000-0000-0000-000000000000').maybeSingle()
 
-    let secretaryId: string | null = existingProfile?.role === 'secretary' ? existingProfile.id : null
+    let secretaryId: string | null = existingProfile?.role === 'receptionist' ? existingProfile.id : null
     let createdAccount = false
 
     if (!secretaryId) {
@@ -162,7 +160,7 @@ export async function POST(request: Request) {
       }
       const { error: profileError } = await admin.from('profiles').insert({
         id: auth.user.id,
-        role: 'secretary',
+        role: 'receptionist',
         full_name: fullName,
         phone: phone || null,
         created_by: doctor.id,
@@ -178,8 +176,8 @@ export async function POST(request: Request) {
     }
 
     const { data: link, error: linkError } = await admin
-      .from('doctor_secretaries')
-      .insert({ doctor_id: doctor.id, secretary_id: secretaryId, created_by: doctor.id })
+      .from('receptionist_doctor_assignments')
+      .insert({ doctor_id: doctor.id, receptionist_id: secretaryId, created_by: doctor.id })
       .select('id').single()
 
     if (linkError) {
@@ -196,12 +194,12 @@ export async function POST(request: Request) {
     // Locations are granted explicitly. None named, none granted.
     const valid = await filterOwnedLocations(admin, doctor.id, grants)
     if (valid.length > 0) {
-      await admin.from('doctor_secretary_locations').insert(
-        valid.map((id) => ({ doctor_secretary_id: link.id, doctor_location_id: id })),
+      await admin.from('receptionist_location_grants').insert(
+        valid.map((id) => ({ assignment_id: link.id, doctor_location_id: id })),
       )
     }
 
-    return NextResponse.json({ id: link.id, secretary_id: secretaryId, granted: valid.length }, { status: 201 })
+    return NextResponse.json({ id: link.id, receptionist_id: secretaryId, granted: valid.length }, { status: 201 })
   } catch (err) {
     console.error('doctor/secretaries POST error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -225,14 +223,14 @@ export async function PATCH(request: Request) {
     // The link must be this doctor's. Without this a doctor could edit another
     // doctor's grants by guessing an id.
     const { data: link } = await admin
-      .from('doctor_secretaries').select('id, doctor_id').eq('id', id).maybeSingle()
+      .from('receptionist_doctor_assignments').select('id, doctor_id').eq('id', id).maybeSingle()
     if (!link || link.doctor_id !== doctor.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
     if (body.status === 'active' || body.status === 'inactive') {
-      await admin.from('doctor_secretaries')
-        .update({ status: body.status, updated_at: new Date().toISOString() })
+      await admin.from('receptionist_doctor_assignments')
+        .update({ is_active: body.status === 'active' })
         .eq('id', id)
     }
 
@@ -244,10 +242,10 @@ export async function PATCH(request: Request) {
         admin, doctor.id,
         body.doctor_location_ids.filter((x: unknown) => typeof x === 'string'),
       )
-      await admin.from('doctor_secretary_locations').delete().eq('doctor_secretary_id', id)
+      await admin.from('receptionist_location_grants').delete().eq('assignment_id', id)
       if (wanted.length > 0) {
-        await admin.from('doctor_secretary_locations').insert(
-          wanted.map((locId) => ({ doctor_secretary_id: id, doctor_location_id: locId })),
+        await admin.from('receptionist_location_grants').insert(
+          wanted.map((locId) => ({ assignment_id: id, doctor_location_id: locId })),
         )
       }
     }
@@ -274,19 +272,19 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const { data: link } = await admin
-      .from('doctor_secretaries').select('id, doctor_id, secretary_id').eq('id', id).maybeSingle()
+      .from('receptionist_doctor_assignments').select('id, doctor_id, receptionist_id').eq('id', id).maybeSingle()
     if (!link || link.doctor_id !== doctor.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
     // Grants go with it by cascade. The account does not: it may be in use by
     // another doctor, and it is not this doctor's to delete either way.
-    await admin.from('doctor_secretaries').delete().eq('id', id)
+    await admin.from('receptionist_doctor_assignments').delete().eq('id', id)
 
     const { count } = await admin
-      .from('doctor_secretaries')
+      .from('receptionist_doctor_assignments')
       .select('id', { count: 'exact', head: true })
-      .eq('secretary_id', link.secretary_id)
+      .eq('receptionist_id', link.receptionist_id)
 
     return NextResponse.json({
       removed: true,
