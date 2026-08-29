@@ -183,3 +183,122 @@
   .icl-aurora, .icl-ping { animation: none; }
   .icl-ping { opacity: 0; }
 }
+
+/* ---------------------------------------------------------------------------
+   iClinic design tokens
+   Mirrors mobile/lib/theme.ts, which is what the patient app renders from, so
+   a form in the dashboard and a card in the patient app are the same blue, the
+   same radius and the same weight rather than two people's idea of them.
+   Values are literal rather than derived: this file and theme.ts are the two
+   halves of one system and must be diffable by eye.
+   --------------------------------------------------------------------------- */
+:root {
+  /* React Native Web resolves to this stack, so matching it is what makes the
+     dashboard and the patient app read as one product. */
+  --icl-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+              sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --icl-brand: #3056D3;
+  --icl-brand-dark: #1F3BA8;
+  --icl-brand-soft: #EAEEFC;
+  --icl-brand-softer: #F4F6FE;
+
+  --icl-ink: #0D1526;
+  --icl-text: #1A2333;
+  --icl-muted: #5B6577;
+  --icl-faint: #93A0B4;
+
+  --icl-bg: #F5F6FA;
+  --icl-card: #FFFFFF;
+  --icl-border: #E6E9F0;
+  --icl-border-strong: #D4D9E3;
+
+  --icl-success: #0E9F6E;
+  --icl-success-bg: #E6F7F1;
+  --icl-danger: #DC2626;
+  --icl-danger-bg: #FDEDED;
+  --icl-amber: #B45309;
+  --icl-amber-bg: #FEF6E7;
+
+  /* Doctor-side teal, the same accent the app uses for staff surfaces. */
+  --icl-doc: #0F766E;
+  --icl-doc-dark: #0B5A54;
+  --icl-doc-soft: #DCF1ED;
+  --icl-doc-softer: #F0FAF8;
+
+  --icl-r-sm: 10px;
+  --icl-r-md: 14px;
+  --icl-r-lg: 18px;
+  --icl-r-xl: 24px;
+  --icl-r-full: 999px;
+
+  /* Two elevations only, as in the app: resting cards and raised surfaces. */
+  --icl-shadow-card: 0 2px 14px rgba(16, 28, 61, 0.06);
+  --icl-shadow-raised: 0 8px 24px rgba(16, 28, 61, 0.10);
+}
+
+/* Anything inside .icl adopts the patient app's typography. */
+.icl { font-family: var(--icl-font); color: var(--icl-text); }
+.icl-hero  { font-size: 28px; font-weight: 800; color: var(--icl-ink); letter-spacing: -0.5px; }
+.icl-h1    { font-size: 22px; font-weight: 800; color: var(--icl-ink); letter-spacing: -0.3px; }
+.icl-h2    { font-size: 17px; font-weight: 700; color: var(--icl-ink); }
+.icl-body  { font-size: 15px; line-height: 22px; color: var(--icl-text); }
+.icl-sub   { font-size: 13.5px; line-height: 19px; color: var(--icl-muted); }
+.icl-label { font-size: 13px; font-weight: 700; color: var(--icl-muted); }
+.icl-small { font-size: 12px; color: var(--icl-faint); }
+
+.icl-card {
+  background: var(--icl-card);
+  border: 1px solid var(--icl-border);
+  border-radius: var(--icl-r-lg);
+  box-shadow: var(--icl-shadow-card);
+}
+
+/* Inputs match the app's: generous height, soft border, brand focus ring and
+   no browser outline on top of it. */
+.icl-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--icl-ink);
+  background: var(--icl-card);
+  border: 1.5px solid var(--icl-border);
+  border-radius: var(--icl-r-md);
+  padding: 13px 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.icl-input::placeholder { color: var(--icl-faint); }
+.icl-input:focus {
+  outline: none;
+  border-color: var(--icl-brand);
+  box-shadow: 0 0 0 4px var(--icl-brand-soft);
+}
+.icl-input[aria-invalid="true"] {
+  border-color: var(--icl-danger);
+  box-shadow: 0 0 0 4px var(--icl-danger-bg);
+}
+
+.icl-btn {
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 800;
+  border-radius: var(--icl-r-full);
+  padding: 14px 24px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 120ms ease, opacity 160ms ease;
+}
+.icl-btn:active:not(:disabled) { transform: scale(0.985); }
+.icl-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.icl-btn-primary { background: var(--icl-brand); color: #fff; }
+.icl-btn-primary:hover:not(:disabled) { background: var(--icl-brand-dark); }
+.icl-btn-ghost {
+  background: transparent; color: var(--icl-brand);
+  border: 1.5px solid var(--icl-border-strong);
+}
+.icl-btn-ghost:hover:not(:disabled) { background: var(--icl-brand-softer); }
+
+@media (prefers-reduced-motion: reduce) {
+  .icl-input, .icl-btn { transition: none; }
+  .icl-btn:active:not(:disabled) { transform: none; }
+}

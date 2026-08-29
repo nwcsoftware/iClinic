@@ -3,10 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Profile } from '@/types'
-import {
-  LayoutDashboard, Users, CalendarDays, FileText,
-  DollarSign, Settings, LogOut, Stethoscope, ClipboardList
-} from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, FileText, DollarSign, Settings, LogOut, Stethoscope, ClipboardList, UserCog, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 
@@ -16,18 +13,22 @@ const doctorNav = [
   { href: '/appointments', label: 'Appointments', icon: CalendarDays },
   { href: '/prescriptions', label: 'Prescriptions', icon: FileText },
   { href: '/finances', label: 'Finances', icon: DollarSign },
+  { href: '/secretaries', label: 'Secretaries', icon: UserCog },
 ]
 
-const receptionistNav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+// A secretary runs the diary, not the medicine. Prescriptions, patient records
+// and finances are gone from here entirely rather than shown and disabled: an
+// action that is never theirs to take should not be somewhere they can see it,
+// and the routes reject them regardless of what the sidebar draws.
+const secretaryNav = [
+  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/appointments', label: 'Appointments', icon: CalendarDays },
-  { href: '/prescriptions', label: 'Prescriptions', icon: FileText },
-  { href: '/finances', label: 'Finances', icon: DollarSign },
+  { href: '/schedule', label: 'Schedule', icon: Clock },
 ]
 
 export default function AppSidebar({ profile }: { profile: Profile }) {
   const pathname = usePathname()
-  const nav = profile.role === 'doctor' ? doctorNav : receptionistNav
+  const nav = profile.role === 'doctor' ? doctorNav : secretaryNav
 
   return (
     <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-slate-200 h-screen">
@@ -39,7 +40,7 @@ export default function AppSidebar({ profile }: { profile: Profile }) {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-800 truncate text-sm">Clinic System</p>
-            <p className="text-xs text-slate-400 truncate capitalize">{profile.role === 'receptionist' ? 'Doctor Assistant' : profile.role}</p>
+            <p className="text-xs text-slate-400 truncate capitalize">{profile.role === 'receptionist' ? 'Secretary' : profile.role}</p>
           </div>
         </div>
       </div>
