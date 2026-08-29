@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/hooks/useProfile'
+import SecretaryOverview from '@/components/secretary/Overview'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CalendarDays, Users, DollarSign, FileText, TrendingUp, Clock } from 'lucide-react'
 
@@ -44,6 +45,10 @@ function StatCard({
 
 export default function DashboardPage() {
   const { profile, loading: profileLoading } = useProfile()
+  
+  // A secretary's dashboard is a different job from a doctor's, so it is a
+  // different screen rather than the same one with pieces removed.
+  if (profile?.role === 'receptionist') return <SecretaryOverview />
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 

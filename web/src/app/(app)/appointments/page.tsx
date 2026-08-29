@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/hooks/useProfile'
+import SecretaryAppointments from '@/components/secretary/Appointments'
 import type { Appointment, AppointmentStatus } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,10 @@ const emptyForm = {
 
 export default function AppointmentsPage() {
   const { profile } = useProfile()
+  
+  // The secretary list comes from a view with no medical columns in it, so
+  // it is a separate component rather than this one with fields hidden.
+  if (profile?.role === 'receptionist') return <SecretaryAppointments />
   const [appointments, setAppointments] = useState<ApptWithNames[]>([])
   const [patients, setPatients] = useState<{ id: string; full_name: string }[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,17 +50,10 @@ export default function AppointmentsPage() {
     try {
       const supabase = createClient()
 
-      let doctorIds: string[] = []
-      if (profile.role === 'doctor') {
-        doctorIds = [profile.id]
-      } else {
-        const { data } = await supabase
-          .from('receptionist_doctor_assignments')
-          .select('doctor_id')
-          .eq('receptionist_id', profile.id)
-          .eq('is_active', true)
-        doctorIds = (data ?? []).map((a: { doctor_id: string }) => a.doctor_id)
-      }
+      // Secretaries never reach here: they returned above, into a screen fed
+      // by a view with no medical columns. What is left is a doctor viewing
+      // their own list.
+      const doctorIds: string[] = [profile.id]
 
       if (doctorIds.length === 0) { setAppointments([]); return }
 
@@ -203,7 +201,6 @@ export default function AppointmentsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead>Patient</TableHead>
-                {profile?.role === 'receptionist' && <TableHead>Doctor</TableHead>}
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
                 {profile?.role === 'doctor' && <TableHead>Action</TableHead>}
@@ -217,7 +214,6 @@ export default function AppointmentsPage() {
                   </TableCell>
                   <TableCell className="text-slate-600 whitespace-nowrap">{a.start_time.slice(0, 5)}</TableCell>
                   <TableCell className="font-medium text-slate-800">{a.patient_name}</TableCell>
-                  {profile?.role === 'receptionist' && <TableCell className="text-slate-500">{a.doctor_name ?? '-'}</TableCell>}
                   <TableCell className="text-slate-500 max-w-[180px] truncate">{a.reason ?? '-'}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_COLORS[a.status]}`}>
