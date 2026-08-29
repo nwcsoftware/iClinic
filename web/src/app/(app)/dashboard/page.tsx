@@ -23,23 +23,24 @@ function StatCard({
   value: string | number
   sub?: string
   icon: React.ElementType
-  color: string
+  color: { bg: string; fg: string }
 }) {
   return (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-slate-500 mb-1">{title}</p>
-            <p className="text-2xl font-bold text-slate-800">{value}</p>
-            {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
-          </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-            <Icon className="w-5 h-5" />
-          </div>
+    <div className="icl-card icl-fade-up p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="icl-label mb-1">{title}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, color: 'var(--icl-ink)', letterSpacing: '-0.5px' }}>{value}</p>
+          {sub && <p className="icl-small mt-1">{sub}</p>}
         </div>
-      </CardContent>
-    </Card>
+        <div
+          className="flex h-10 w-10 items-center justify-center"
+          style={{ background: color.bg, color: color.fg, borderRadius: 'var(--icl-r-md)' }}
+        >
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -136,56 +137,56 @@ export default function DashboardPage() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+    <div className="icl p-6 sm:p-8 space-y-6">
+      <div className="icl-fade-up">
+        <h1 className="icl-hero">
           Welcome back, {profile?.full_name?.split(' ').slice(0, 2).join(' ')}
         </h1>
-        <p className="text-slate-400 text-sm mt-1">{today}</p>
+        <p className="icl-sub mt-1">{today}</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="icl-stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Today's Appointments"
           value={stats?.todayAppointments ?? 0}
           sub={`${stats?.completedToday ?? 0} completed`}
           icon={CalendarDays}
-          color="bg-blue-50 text-blue-600"
+          color={{ bg: 'var(--icl-accent-soft)', fg: 'var(--icl-accent-dark)' }}
         />
         <StatCard
           title="Total Patients"
           value={stats?.totalPatients ?? 0}
           sub="across all appointments"
           icon={Users}
-          color="bg-emerald-50 text-emerald-600"
+          color={{ bg: 'var(--icl-success-bg)', fg: 'var(--icl-success)' }}
         />
         <StatCard
           title="Revenue This Month"
           value={`SAR ${(stats?.monthRevenue ?? 0).toLocaleString()}`}
           sub="paid appointments"
           icon={TrendingUp}
-          color="bg-violet-50 text-violet-600"
+          color={{ bg: 'var(--icl-brand-soft)', fg: 'var(--icl-brand-dark)' }}
         />
         <StatCard
           title="Pending Payments"
           value={`SAR ${(stats?.pendingPayments ?? 0).toLocaleString()}`}
           sub="awaiting collection"
           icon={DollarSign}
-          color="bg-amber-50 text-amber-600"
+          color={{ bg: 'var(--icl-amber-bg)', fg: 'var(--icl-amber)' }}
         />
         <StatCard
           title="Unprinted Prescriptions"
           value={stats?.pendingPrescriptions ?? 0}
           sub="need to be printed"
           icon={FileText}
-          color="bg-rose-50 text-rose-600"
+          color={{ bg: 'var(--icl-danger-bg)', fg: 'var(--icl-danger)' }}
         />
         <StatCard
           title="Completed Today"
           value={stats?.completedToday ?? 0}
           sub={`of ${stats?.todayAppointments ?? 0} scheduled`}
           icon={Clock}
-          color="bg-slate-100 text-slate-600"
+          color={{ bg: '#EEF1F6', fg: 'var(--icl-muted)' }}
         />
       </div>
     </div>

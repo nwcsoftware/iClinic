@@ -70,7 +70,7 @@ export default function ContextBar({
       <Picker
         open={openPlaces}
         setOpen={(v) => { setOpenPlaces(v); if (v) setOpenDoctors(false) }}
-        icon={<Building2 className="h-4 w-4" style={{ color: 'var(--icl-brand)' }} />}
+        icon={<Building2 className="h-4 w-4" style={{ color: 'var(--icl-accent)' }} />}
         label={place?.name ?? 'All my locations'}
         sub={place?.city ?? (locations.length > 1 ? `${locations.length} places` : undefined)}
       >
@@ -112,7 +112,7 @@ function Picker({
         style={{
           border: '1.5px solid var(--icl-border)',
           borderRadius: 'var(--icl-r-full)',
-          background: open ? 'var(--icl-brand-softer)' : 'var(--icl-card)',
+          background: open ? 'var(--icl-accent-softer)' : 'var(--icl-card)',
         }}
       >
         {icon}
@@ -165,14 +165,14 @@ function Option({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--icl-brand-softer)]"
+      className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--icl-accent-softer)]"
       style={{ borderRadius: 'var(--icl-r-md)' }}
     >
       <span className="flex-1">
         <span className="block" style={{ fontSize: 14, fontWeight: 600, color: 'var(--icl-ink)' }}>{title}</span>
         {sub ? <span className="icl-small block">{sub}</span> : null}
       </span>
-      {selected ? <Check className="h-4 w-4" style={{ color: 'var(--icl-brand)' }} /> : null}
+      {selected ? <Check className="h-4 w-4" style={{ color: 'var(--icl-accent)' }} /> : null}
     </button>
   )
 }

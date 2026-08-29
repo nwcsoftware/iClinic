@@ -31,34 +31,44 @@ export default function AppSidebar({ profile }: { profile: Profile }) {
   const nav = profile.role === 'doctor' ? doctorNav : secretaryNav
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-slate-200 h-screen">
+    <aside
+      className="w-64 shrink-0 flex flex-col h-screen"
+      style={{ background: 'var(--icl-card)', borderRight: '1px solid var(--icl-border)' }}
+    >
       {/* Brand */}
-      <div className="p-5 border-b border-slate-100">
+      <div className="p-5" style={{ borderBottom: '1px solid var(--icl-border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+          <div
+            className="w-9 h-9 flex items-center justify-center shrink-0"
+            style={{ background: 'var(--icl-accent)', borderRadius: 12 }}
+          >
             <Stethoscope className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-slate-800 truncate text-sm">Clinic System</p>
-            <p className="text-xs text-slate-400 truncate capitalize">{profile.role === 'receptionist' ? 'Secretary' : profile.role}</p>
+            <p className="truncate" style={{ fontSize: 15, fontWeight: 800, color: 'var(--icl-ink)', letterSpacing: '-0.2px' }}>iClinic</p>
+            <p className="icl-small truncate capitalize">{profile.role === 'receptionist' ? 'Secretary' : profile.role}</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }, i) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                active
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              )}
+              className="icl-fade-up flex items-center gap-3 px-3 py-2.5 transition-colors"
+              style={{
+                // Staggered the way the app's lists arrive, one after another
+                // rather than all at once.
+                '--icl-delay': `${i * 45}ms`,
+                borderRadius: 'var(--icl-r-md)',
+                fontSize: 14, fontWeight: active ? 800 : 600,
+                background: active ? 'var(--icl-accent-soft)' : 'transparent',
+                color: active ? 'var(--icl-accent-dark)' : 'var(--icl-muted)',
+              } as React.CSSProperties}
             >
               <Icon className="w-4 h-4 shrink-0" />
               {label}
@@ -66,15 +76,16 @@ export default function AppSidebar({ profile }: { profile: Profile }) {
           )
         })}
 
-        <div className="pt-2 mt-2 border-t border-slate-100">
+        <div className="pt-2 mt-2" style={{ borderTop: '1px solid var(--icl-border)' }}>
           <Link
             href="/settings"
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              pathname.startsWith('/settings')
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            )}
+            className="flex items-center gap-3 px-3 py-2.5 transition-colors"
+            style={{
+              borderRadius: 'var(--icl-r-md)',
+              fontSize: 14, fontWeight: pathname.startsWith('/settings') ? 800 : 600,
+              background: pathname.startsWith('/settings') ? 'var(--icl-accent-soft)' : 'transparent',
+              color: pathname.startsWith('/settings') ? 'var(--icl-accent-dark)' : 'var(--icl-muted)',
+            }}
           >
             <Settings className="w-4 h-4 shrink-0" />
             Settings
@@ -83,16 +94,17 @@ export default function AppSidebar({ profile }: { profile: Profile }) {
       </nav>
 
       {/* User info */}
-      <div className="p-4 border-t border-slate-100">
+      <div className="p-4" style={{ borderTop: '1px solid var(--icl-border)' }}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-            <ClipboardList className="w-4 h-4 text-slate-500" />
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            style={{ background: 'var(--icl-accent-soft)' }}
+          >
+            <ClipboardList className="w-4 h-4" style={{ color: 'var(--icl-accent-dark)' }} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800 truncate">{profile.full_name}</p>
-            {profile.specialty && (
-              <p className="text-xs text-slate-400 truncate">{profile.specialty}</p>
-            )}
+            <p className="truncate" style={{ fontSize: 14, fontWeight: 700, color: 'var(--icl-ink)' }}>{profile.full_name}</p>
+            {profile.specialty && <p className="icl-small truncate">{profile.specialty}</p>}
           </div>
         </div>
         <form action="/api/auth/signout" method="POST">

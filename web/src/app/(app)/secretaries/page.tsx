@@ -123,7 +123,7 @@ export default function SecretariesPage() {
               <span
                 key={i}
                 className="h-1.5 w-10 rounded-full"
-                style={{ background: i < used ? 'var(--icl-brand)' : 'var(--icl-border-strong)' }}
+                style={{ background: i < used ? 'var(--icl-accent)' : 'var(--icl-border-strong)' }}
               />
             ))}
           </div>
@@ -220,9 +220,9 @@ function SecretaryCard({
         <div className="flex items-start gap-3">
           <div
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-            style={{ background: 'var(--icl-brand-soft)' }}
+            style={{ background: 'var(--icl-accent-soft)' }}
           >
-            <UserCog className="h-5 w-5" style={{ color: 'var(--icl-brand)' }} />
+            <UserCog className="h-5 w-5" style={{ color: 'var(--icl-accent)' }} />
           </div>
           <div>
             <h2 className="icl-h2">{secretary.full_name}</h2>
@@ -258,8 +258,8 @@ function SecretaryCard({
                 key={l.doctor_location_id}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5"
                 style={{
-                  background: 'var(--icl-brand-softer)',
-                  color: 'var(--icl-brand-dark)',
+                  background: 'var(--icl-accent-softer)',
+                  color: 'var(--icl-accent-dark)',
                   borderRadius: 'var(--icl-r-full)',
                   fontSize: 13, fontWeight: 700,
                 }}
@@ -409,15 +409,15 @@ function LocationPicker({
             onClick={() => setPicked(on ? picked.filter((x) => x !== w.id) : [...picked, w.id])}
             className="flex w-full items-center gap-3 p-3 text-left transition-colors"
             style={{
-              border: `1.5px solid ${on ? 'var(--icl-brand)' : 'var(--icl-border)'}`,
-              background: on ? 'var(--icl-brand-softer)' : 'var(--icl-card)',
+              border: `1.5px solid ${on ? 'var(--icl-accent)' : 'var(--icl-border)'}`,
+              background: on ? 'var(--icl-accent-softer)' : 'var(--icl-card)',
               borderRadius: 'var(--icl-r-md)',
             }}
           >
             <span
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
               style={{
-                background: on ? 'var(--icl-brand)' : 'transparent',
+                background: on ? 'var(--icl-accent)' : 'transparent',
                 border: on ? 'none' : '1.5px solid var(--icl-border-strong)',
               }}
             >
@@ -496,8 +496,8 @@ function Banner({ tone, icon, children }: { tone: 'danger' | 'amber' | 'success'
 function EmptyState({ onAdd, disabled }: { onAdd: () => void; disabled: boolean }) {
   return (
     <div className="icl-card flex flex-col items-center px-6 py-12 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--icl-brand-soft)' }}>
-        <UserCog className="h-6 w-6" style={{ color: 'var(--icl-brand)' }} />
+      <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--icl-accent-soft)' }}>
+        <UserCog className="h-6 w-6" style={{ color: 'var(--icl-accent)' }} />
       </div>
       <h2 className="icl-h2 mt-4">No secretaries yet</h2>
       <p className="icl-sub mt-2 max-w-sm">

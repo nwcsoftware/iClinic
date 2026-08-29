@@ -16,9 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile || !profile.is_active) redirect('/login')
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="icl icl-staff flex h-screen overflow-hidden">
       <AppSidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto bg-slate-50">
+      <main className="flex-1 overflow-y-auto" style={{ background: 'var(--icl-bg)' }}>
         {children}
       </main>
     </div>

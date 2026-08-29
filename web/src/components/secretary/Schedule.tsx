@@ -130,7 +130,7 @@ export default function SecretarySchedule() {
               return (
                 <div key={loc.doctor_location_id} className="icl-card p-4 sm:p-5">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" style={{ color: 'var(--icl-brand)' }} />
+                    <Building2 className="h-4 w-4" style={{ color: 'var(--icl-accent)' }} />
                     <h2 className="icl-h2">{loc.name}</h2>
                     {loc.city ? <span className="icl-small">· {loc.city}</span> : null}
                   </div>
@@ -149,7 +149,7 @@ export default function SecretarySchedule() {
                           style={{
                             fontSize: 13, fontWeight: 700,
                             borderRadius: 'var(--icl-r-md)',
-                            background: on ? 'var(--icl-brand)' : 'var(--icl-card)',
+                            background: on ? 'var(--icl-accent)' : 'var(--icl-card)',
                             color: on ? '#fff' : 'var(--icl-muted)',
                             border: on ? 'none' : '1.5px solid var(--icl-border)',
                           }}

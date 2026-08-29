@@ -302,3 +302,73 @@
   .icl-input, .icl-btn { transition: none; }
   .icl-btn:active:not(:disabled) { transform: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Staff surfaces
+   The app gives doctors teal and patients indigo, on purpose: signing into the
+   practice should not look like booking an appointment. Anything inside
+   .icl-staff remaps the accent to that teal, so a card written once is indigo
+   on the public pages and teal in the dashboard without being written twice.
+   --------------------------------------------------------------------------- */
+.icl-staff {
+  --icl-accent: var(--icl-doc);
+  --icl-accent-dark: var(--icl-doc-dark);
+  --icl-accent-soft: var(--icl-doc-soft);
+  --icl-accent-softer: var(--icl-doc-softer);
+}
+/* Public pages keep the patient blue. */
+:root {
+  --icl-accent: var(--icl-brand);
+  --icl-accent-dark: var(--icl-brand-dark);
+  --icl-accent-soft: var(--icl-brand-soft);
+  --icl-accent-softer: var(--icl-brand-softer);
+}
+
+.icl-staff .icl-input:focus {
+  border-color: var(--icl-accent);
+  box-shadow: 0 0 0 4px var(--icl-accent-soft);
+}
+.icl-staff .icl-btn-primary { background: var(--icl-accent); }
+.icl-staff .icl-btn-primary:hover:not(:disabled) { background: var(--icl-accent-dark); }
+.icl-staff .icl-btn-ghost { color: var(--icl-accent); }
+.icl-staff .icl-btn-ghost:hover:not(:disabled) { background: var(--icl-accent-softer); }
+
+/* ---------------------------------------------------------------------------
+   Motion
+   Same numbers as components/motion.tsx in the app: 460ms on the same curve,
+   rising 18px. Copied rather than approximated, so a screen in the browser and
+   the same screen on a phone settle at the same moment.
+   --------------------------------------------------------------------------- */
+@keyframes icl-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes icl-scale-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: none; }
+}
+
+.icl-fade-up {
+  animation: icl-fade-up 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--icl-delay, 0ms);
+}
+/* ScaleIn is a spring in the app; this is the closest single curve, used for
+   the same thing — confirmations and things that should feel like they landed. */
+.icl-scale-in {
+  animation: icl-scale-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: var(--icl-delay, 0ms);
+}
+
+/* Staggering siblings, as FadeInUp's `delay` does. Capped at six because past
+   that the last card is waiting on an animation rather than the other way
+   round. */
+.icl-stagger > *:nth-child(1) { --icl-delay: 0ms }
+.icl-stagger > *:nth-child(2) { --icl-delay: 55ms }
+.icl-stagger > *:nth-child(3) { --icl-delay: 110ms }
+.icl-stagger > *:nth-child(4) { --icl-delay: 165ms }
+.icl-stagger > *:nth-child(5) { --icl-delay: 220ms }
+.icl-stagger > *:nth-child(n+6) { --icl-delay: 275ms }
+
+@media (prefers-reduced-motion: reduce) {
+  .icl-fade-up, .icl-scale-in { animation: none; }
+}

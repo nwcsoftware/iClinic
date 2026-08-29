@@ -159,7 +159,7 @@ export default function SecretaryAppointments() {
             <div className="icl-card mt-5 hidden overflow-hidden md:block">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ background: 'var(--icl-brand-softer)' }}>
+                  <tr style={{ background: 'var(--icl-accent-softer)' }}>
                     {['Patient', 'When', 'Where', 'Status', ''].map((h) => (
                       <th key={h} className="icl-label px-4 py-3">{h}</th>
                     ))}
@@ -249,7 +249,7 @@ function StatusMenu({
   return (
     <div className={wide ? 'grid grid-cols-2 gap-1.5' : 'flex flex-wrap gap-1.5'}>
       {busy ? (
-        <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--icl-brand)' }} />
+        <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--icl-accent)' }} />
       ) : (
         (['confirmed', 'completed', 'no_show', 'cancelled'] as const).map((s) => (
           <button
@@ -352,8 +352,8 @@ function Empty({ filtered }: { filtered: boolean }) {
 function Centered({ title, body }: { title: string; body: string }) {
   return (
     <div className="icl-card mt-5 flex flex-col items-center px-6 py-14 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--icl-brand-soft)' }}>
-        <CalendarDays className="h-6 w-6" style={{ color: 'var(--icl-brand)' }} />
+      <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--icl-accent-soft)' }}>
+        <CalendarDays className="h-6 w-6" style={{ color: 'var(--icl-accent)' }} />
       </div>
       <h2 className="icl-h2 mt-4">{title}</h2>
       <p className="icl-sub mt-2 max-w-sm">{body}</p>

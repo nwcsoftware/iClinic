@@ -101,7 +101,7 @@ export default function SecretaryOverview() {
         <section className="mt-7">
           <div className="flex items-center justify-between">
             <h2 className="icl-h1">Today</h2>
-            <Link href="/appointments" className="icl-sub inline-flex items-center gap-1" style={{ color: 'var(--icl-brand)', fontWeight: 700 }}>
+            <Link href="/appointments" className="icl-sub inline-flex items-center gap-1" style={{ color: 'var(--icl-accent)', fontWeight: 700 }}>
               All appointments <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -139,7 +139,7 @@ export default function SecretaryOverview() {
               {locations.map((l) => (
                 <div key={l.doctor_location_id} className="icl-card p-4">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" style={{ color: 'var(--icl-brand)' }} />
+                    <Building2 className="h-4 w-4" style={{ color: 'var(--icl-accent)' }} />
                     <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--icl-ink)' }}>{l.name}</span>
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -152,8 +152,8 @@ export default function SecretaryOverview() {
                           style={{
                             fontSize: 11.5, fontWeight: 700,
                             borderRadius: 'var(--icl-r-sm)',
-                            background: on ? 'var(--icl-brand-soft)' : 'transparent',
-                            color: on ? 'var(--icl-brand-dark)' : 'var(--icl-faint)',
+                            background: on ? 'var(--icl-accent-soft)' : 'transparent',
+                            color: on ? 'var(--icl-accent-dark)' : 'var(--icl-faint)',
                             border: on ? 'none' : '1px solid var(--icl-border)',
                           }}
                         >
@@ -184,9 +184,9 @@ function AppointmentRow({
     <div className="icl-card flex flex-wrap items-center gap-3 p-3.5">
       <div
         className="flex h-11 w-14 shrink-0 flex-col items-center justify-center"
-        style={{ background: 'var(--icl-brand-softer)', borderRadius: 'var(--icl-r-md)' }}
+        style={{ background: 'var(--icl-accent-softer)', borderRadius: 'var(--icl-r-md)' }}
       >
-        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--icl-brand-dark)' }}>{row.start_time.slice(0, 5)}</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--icl-accent-dark)' }}>{row.start_time.slice(0, 5)}</span>
         {showDate ? (
           <span className="icl-small" style={{ fontSize: 10 }}>
             {new Date(`${row.appointment_date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
