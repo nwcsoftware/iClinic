@@ -3,30 +3,56 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Stethoscope, Loader2, ArrowLeft } from 'lucide-react'
+import { Stethoscope, Loader2, ArrowLeft, Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
 import OtpDialog from '@/components/otp-dialog'
+
+// ---------------------------------------------------------------------------
+// Doctor registration.
+//
+// Same tokens as the patient app, so someone arriving from iclinic.health does
+// not feel handed off to a different product halfway through signing up.
+//
+// The password rules are shown as they are met rather than as an error after
+// submitting, because "must be 8 characters" is more useful before you have
+// typed 6 than after.
+// ---------------------------------------------------------------------------
+
+const PATIENT_APP = 'https://iclinic.health'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ full_name: '', specialty: '', phone: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({
+    full_name: '', specialty: '', phone: '', email: '', password: '', confirm: '',
+  })
+  const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [otpOpen, setOtpOpen] = useState(false)
   const [otpEmail, setOtpEmail] = useState('')
 
-  function set(field: string) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [field]: e.target.value }))
+  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((f) => ({ ...f, [field]: e.target.value }))
+    if (error) setError('')
+  }
+
+  const longEnough = form.password.length >= 8
+  const matches = form.password.length > 0 && form.password === form.confirm
+
+  async function handleResendOtp() {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: otpEmail }),
+    })
+    const body = await res.json()
+    if (!res.ok) throw new Error(body.error ?? 'Could not send another code.')
   }
 
   async function handleRegister(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
-    if (form.password !== form.confirm) { setError('Passwords do not match.'); return }
-    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (!matches) { setError('The two passwords do not match.'); return }
+    if (!longEnough) { setError('Use at least 8 characters for the password.'); return }
     setLoading(true)
 
     try {
@@ -41,103 +67,149 @@ export default function RegisterPage() {
           phone: form.phone || undefined,
         }),
       })
-
-      const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Registration failed.'); setLoading(false); return }
-
-      // Send OTP for email verification
-      const otpRes = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email }),
-      })
-      const otpBody = await otpRes.json()
-
-      if (!otpRes.ok) { setError(otpBody.error ?? 'Failed to send verification code.'); setLoading(false); return }
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'Could not create that account.')
 
       setOtpEmail(form.email)
-      setLoading(false)
       setOtpOpen(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
       setLoading(false)
     }
   }
 
-  async function handleResendOtp() {
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: otpEmail }),
-    })
-    const body = await res.json()
-    if (!res.ok) throw new Error(body.error ?? 'Failed to resend code.')
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div
+      className="icl flex min-h-screen flex-col items-center justify-center px-5 py-10"
+      style={{ background: 'var(--icl-bg)' }}
+    >
+      <div className="w-full max-w-md">
+        <Link
+          href="/login"
+          className="icl-sub mb-5 inline-flex items-center gap-1.5"
+          style={{ color: 'var(--icl-muted)' }}
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to sign in
+        </Link>
 
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg">
-            <Stethoscope className="w-7 h-7 text-white" />
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center"
+            style={{ background: 'var(--icl-brand)', borderRadius: 20, boxShadow: 'var(--icl-shadow-raised)' }}
+          >
+            <Stethoscope className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Create Doctor Account</h1>
-          <p className="text-slate-500 text-sm">Fill in your details to get started</p>
+          <h1 className="mt-4" style={{ fontSize: 26, fontWeight: 800, color: 'var(--icl-ink)', letterSpacing: '-0.5px' }}>
+            Create a doctor account
+          </h1>
+          <p className="icl-sub mt-1.5 max-w-sm">
+            Set your hours, take bookings around the clock, and see a patient&apos;s history before
+            they sit down.
+          </p>
         </div>
 
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Doctor Registration</CardTitle>
-            <CardDescription>Your account will be verified by email before proceeding.</CardDescription>
-          </CardHeader>
+        <div className="icl-card p-6 sm:p-7">
+          <form onSubmit={handleRegister} className="space-y-4">
+            <Field label="Full name">
+              <input className="icl-input" required autoComplete="name" placeholder="Dr. Lara Haddad"
+                value={form.full_name} onChange={set('full_name')} disabled={loading} />
+            </Field>
 
-          <form onSubmit={handleRegister}>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="full_name">Full Name <span className="text-red-500">*</span></Label>
-                <Input id="full_name" placeholder="Dr. Ahmed Al-Rashid" value={form.full_name} onChange={set('full_name')} required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="specialty">Specialty</Label>
-                  <Input id="specialty" placeholder="Dermatology" value={form.specialty} onChange={set('specialty')} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" placeholder="+966 5x xxx xxxx" value={form.phone} onChange={set('phone')} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                <Input id="email" type="email" placeholder="doctor@clinic.com" value={form.email} onChange={set('email')} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-                <Input id="password" type="password" placeholder="Min 8 characters" value={form.password} onChange={set('password')} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirm">Confirm Password <span className="text-red-500">*</span></Label>
-                <Input id="confirm" type="password" placeholder="Repeat password" value={form.confirm} onChange={set('confirm')} required />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Specialty" hint="Optional">
+                <input className="icl-input" placeholder="Cardiology"
+                  value={form.specialty} onChange={set('specialty')} disabled={loading} />
+              </Field>
+              <Field label="Phone" hint="Optional">
+                <input className="icl-input" autoComplete="tel" placeholder="+961 …"
+                  value={form.phone} onChange={set('phone')} disabled={loading} />
+              </Field>
+            </div>
 
-              {error && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>
-              )}
-            </CardContent>
+            <Field label="Email">
+              <input className="icl-input" type="email" required autoComplete="email"
+                placeholder="you@clinic.com" value={form.email} onChange={set('email')} disabled={loading} />
+            </Field>
 
-            <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Account
-              </Button>
-              <Link href="/login" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-                <ArrowLeft className="w-3 h-3" /> Back to Login
-              </Link>
-            </CardFooter>
+            <Field label="Password">
+              <div className="relative">
+                <input
+                  className="icl-input pr-11"
+                  type={showPass ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  value={form.password}
+                  onChange={set('password')}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                >
+                  {showPass
+                    ? <EyeOff className="h-4 w-4" style={{ color: 'var(--icl-faint)' }} />
+                    : <Eye className="h-4 w-4" style={{ color: 'var(--icl-faint)' }} />}
+                </button>
+              </div>
+            </Field>
+
+            <Field label="Confirm password">
+              <input
+                className="icl-input"
+                type={showPass ? 'text' : 'password'}
+                required
+                autoComplete="new-password"
+                placeholder="Type it again"
+                value={form.confirm}
+                onChange={set('confirm')}
+                disabled={loading}
+                aria-invalid={form.confirm.length > 0 && !matches}
+              />
+            </Field>
+
+            {/* Met as you type, rather than as a complaint after submitting. */}
+            {form.password.length > 0 ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <Rule ok={longEnough}>At least 8 characters</Rule>
+                <Rule ok={matches}>Both passwords match</Rule>
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="flex items-start gap-2 p-3"
+                style={{ background: 'var(--icl-danger-bg)', borderRadius: 'var(--icl-r-md)' }}>
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--icl-danger)' }} />
+                <span className="icl-sub" style={{ color: 'var(--icl-danger)' }}>{error}</span>
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="icl-btn icl-btn-primary flex w-full items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Create account
+            </button>
           </form>
-        </Card>
 
+          <p className="icl-small mt-5 text-center">
+            By creating an account you agree to our{' '}
+            <Link href="/terms" style={{ color: 'var(--icl-brand)', fontWeight: 700 }}>Terms</Link> and{' '}
+            <Link href="/privacy" style={{ color: 'var(--icl-brand)', fontWeight: 700 }}>Privacy Policy</Link>.
+          </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="icl-small">Looking to book an appointment instead?</p>
+          <a href={PATIENT_APP} className="icl-sub" style={{ color: 'var(--icl-brand)', fontWeight: 700 }}>
+            Open the patient app
+          </a>
+        </div>
       </div>
 
       <OtpDialog
@@ -145,8 +217,31 @@ export default function RegisterPage() {
         email={otpEmail}
         onSuccess={() => { setOtpOpen(false); router.push('/dashboard') }}
         onResend={handleResendOtp}
-        onClose={() => { setOtpOpen(false) }}
+        onClose={() => setOtpOpen(false)}
       />
     </div>
+  )
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="icl-label mb-1.5 block">
+        {label}{hint ? <span className="icl-small font-normal"> · {hint}</span> : null}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+function Rule({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      style={{ fontSize: 12.5, fontWeight: 600, color: ok ? 'var(--icl-success)' : 'var(--icl-faint)' }}
+    >
+      <Check className="h-3.5 w-3.5" style={{ opacity: ok ? 1 : 0.35 }} />
+      {children}
+    </span>
   )
 }

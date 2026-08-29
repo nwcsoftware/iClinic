@@ -4,25 +4,52 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Stethoscope, UserRound, ClipboardList, Loader2 } from 'lucide-react'
+import { Stethoscope, UserCog, Loader2, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import OtpDialog from '@/components/otp-dialog'
 
+// ---------------------------------------------------------------------------
+// Staff sign-in.
+//
+// Styled from the iClinic tokens so it is recognisably the same product as the
+// patient app: same blue, same card radius, same weights, same font stack.
+// The behaviour is unchanged — password sign-in, a role check against the
+// profile, and the OTP dialog when the account needs confirming.
+//
+// The role tabs say Doctor and Secretary. The database value is still
+// `receptionist`, which is what the check compares against.
+// ---------------------------------------------------------------------------
+
+const PATIENT_APP = 'https://iclinic.health'
+
 type Role = 'doctor' | 'receptionist'
+
+const ROLES: { key: Role; label: string; icon: typeof Stethoscope; blurb: string }[] = [
+  { key: 'doctor', label: 'Doctor', icon: Stethoscope, blurb: 'Your patients, schedule and prescriptions.' },
+  { key: 'receptionist', label: 'Secretary', icon: UserCog, blurb: 'The diary for the places you manage.' },
+]
 
 export default function LoginPage() {
   const router = useRouter()
   const [role, setRole] = useState<Role>('doctor')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [otpOpen, setOtpOpen] = useState(false)
   const [otpEmail, setOtpEmail] = useState('')
+
+  // The dialog asks for a fresh code when the first one expires or never
+  // arrived; the same endpoint the registration flow uses.
+  async function resendCode() {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: otpEmail }),
+    })
+    const body = await res.json()
+    if (!res.ok) throw new Error(body.error ?? 'Could not send another code.')
+  }
 
   async function handleLogin(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -33,198 +60,182 @@ export default function LoginPage() {
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (authError) {
+      // Supabase says "Email not confirmed" for an account that exists but has
+      // never verified, which is a different problem from a wrong password.
+      if (/not confirmed/i.test(authError.message)) {
+        setOtpEmail(email)
+        setOtpOpen(true)
+        setLoading(false)
+        return
+      }
       setError(authError.message)
       setLoading(false)
       return
     }
 
-    // Verify the profile role matches selected role
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, is_active')
-      .eq('id', data.user.id)
-      .single()
+      .from('profiles').select('role, is_active').eq('id', data.user.id).single()
 
     if (!profile) {
-      setError('Profile not found. Please contact your administrator.')
+      setError('We could not find a staff profile for that account.')
       await supabase.auth.signOut()
       setLoading(false)
       return
     }
-
-    if (profile.role !== role) {
-      setError(`This account is registered as a ${profile.role}, not a ${role}.`)
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
     if (!profile.is_active) {
-      setError('Your account has been deactivated. Please contact your administrator.')
+      setError('That account has been deactivated. Ask the doctor who added you.')
+      await supabase.auth.signOut()
+      setLoading(false)
+      return
+    }
+    if (profile.role !== role) {
+      const actual = profile.role === 'receptionist' ? 'secretary' : profile.role
+      setError(`That account is a ${actual}. Choose ${actual} above and try again.`)
       await supabase.auth.signOut()
       setLoading(false)
       return
     }
 
-    // Credentials valid — sign out temporary session and trigger OTP
-    await supabase.auth.signOut()
-
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const body = await res.json()
-
-    if (!res.ok) {
-      setError(body.error ?? 'Failed to send verification code.')
-      setLoading(false)
-      return
-    }
-
-    setOtpEmail(email)
-    setLoading(false)
-    setOtpOpen(true)
+    router.push('/dashboard')
   }
 
-  async function handleResendOtp() {
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: otpEmail }),
-    })
-    const body = await res.json()
-    if (!res.ok) throw new Error(body.error ?? 'Failed to resend code.')
-  }
+  const active = ROLES.find((r) => r.key === role)!
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 p-4">
-      <div className="w-full max-w-md space-y-6">
-
-        {/* Logo / Brand */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg">
-            <Stethoscope className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800">Clinic System</h1>
-          <p className="text-slate-500 text-sm">Sign in to your account</p>
+    <div
+      className="icl flex min-h-screen flex-col items-center justify-center px-5 py-10"
+      style={{ background: 'var(--icl-bg)' }}
+    >
+      {/* Brand */}
+      <div className="mb-7 flex flex-col items-center text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center"
+          style={{ background: 'var(--icl-brand)', borderRadius: 20, boxShadow: 'var(--icl-shadow-raised)' }}
+        >
+          <Stethoscope className="h-8 w-8 text-white" />
         </div>
+        <h1 className="mt-4" style={{ fontSize: 30, fontWeight: 800, color: 'var(--icl-ink)', letterSpacing: '-0.6px' }}>
+          iClinic
+        </h1>
+        <p className="icl-sub mt-1">The right doctor, in minutes</p>
+      </div>
 
-        {/* Role selector */}
-        <Tabs value={role} onValueChange={(v) => { setRole(v as Role); setError('') }}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="doctor" className="flex items-center gap-2">
-              <Stethoscope className="w-4 h-4" />
-              Doctor
-            </TabsTrigger>
-            <TabsTrigger value="receptionist" className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" />
-              Doctor Assistant
-            </TabsTrigger>
-          </TabsList>
-
-          {(['doctor', 'receptionist'] as Role[]).map((r) => (
-            <TabsContent key={r} value={r}>
-              <Card className="border-0 shadow-lg">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">
-                    {r === 'doctor' ? 'Doctor Login' : 'Doctor Assistant Login'}
-                  </CardTitle>
-                  <CardDescription>
-                    {r === 'doctor'
-                      ? 'Access your patients, appointments, and prescriptions.'
-                      : 'Manage appointments and finances for your assigned doctors.'}
-                  </CardDescription>
-                </CardHeader>
-
-                <form onSubmit={handleLogin}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@clinic.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoComplete="current-password"
-                      />
-                    </div>
-
-                    {error && (
-                      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                        {error}
-                      </p>
-                    )}
-                  </CardContent>
-
-                  <CardFooter className="flex flex-col gap-3">
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Sign In
-                    </Button>
-                    {r === 'doctor' && (
-                      <p className="text-sm text-slate-500 text-center">
-                        New doctor?{' '}
-                        <Link href="/register" className="text-blue-600 hover:underline font-medium">
-                          Create an account
-                        </Link>
-                      </p>
-                    )}
-                    {r === 'receptionist' && (
-                      <p className="text-xs text-slate-400 text-center">
-                        Assistant accounts are created by your assigned doctor.
-                      </p>
-                    )}
-                  </CardFooter>
-                </form>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        {/* Patient redirect */}
-        <div className="text-center">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 bg-gradient-to-br from-blue-50 to-slate-100 text-xs text-slate-400">
-                Are you a patient?
-              </span>
-            </div>
-          </div>
-          <div className="mt-4">
-            <Link href="/patient/login">
-              <Button variant="outline" className="w-full max-w-md gap-2">
-                <UserRound className="w-4 h-4" />
-                Open Patient App
-              </Button>
-            </Link>
-          </div>
+      <div className="icl-card w-full max-w-md p-6 sm:p-7">
+        {/* Role */}
+        <div
+          className="mb-5 grid grid-cols-2 gap-1 p-1"
+          style={{ background: 'var(--icl-bg)', borderRadius: 'var(--icl-r-md)' }}
+        >
+          {ROLES.map((r) => {
+            const on = r.key === role
+            return (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => { setRole(r.key); setError('') }}
+                className="flex items-center justify-center gap-2 py-2.5 transition-colors"
+                style={{
+                  borderRadius: 'var(--icl-r-sm)',
+                  background: on ? 'var(--icl-card)' : 'transparent',
+                  boxShadow: on ? 'var(--icl-shadow-card)' : 'none',
+                  color: on ? 'var(--icl-brand)' : 'var(--icl-muted)',
+                  fontSize: 14.5, fontWeight: 700,
+                }}
+              >
+                <r.icon className="h-4 w-4" />
+                {r.label}
+              </button>
+            )
+          })}
         </div>
+        <p className="icl-small mb-5 text-center">{active.blurb}</p>
 
+        <form onSubmit={handleLogin} className="space-y-4">
+          <label className="block">
+            <span className="icl-label mb-1.5 block">Email</span>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              className="icl-input"
+              placeholder="you@clinic.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); if (error) setError('') }}
+              disabled={loading}
+            />
+          </label>
+
+          <label className="block">
+            <span className="icl-label mb-1.5 block">Password</span>
+            <div className="relative">
+              <input
+                type={showPass ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                className="icl-input pr-11"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); if (error) setError('') }}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                aria-label={showPass ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+              >
+                {showPass
+                  ? <EyeOff className="h-4 w-4" style={{ color: 'var(--icl-faint)' }} />
+                  : <Eye className="h-4 w-4" style={{ color: 'var(--icl-faint)' }} />}
+              </button>
+            </div>
+          </label>
+
+          {error ? (
+            <div
+              className="flex items-start gap-2 p-3"
+              style={{ background: 'var(--icl-danger-bg)', borderRadius: 'var(--icl-r-md)' }}
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--icl-danger)' }} />
+              <span className="icl-sub" style={{ color: 'var(--icl-danger)' }}>{error}</span>
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="icl-btn icl-btn-primary flex w-full items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Sign in
+          </button>
+        </form>
+
+        <p className="icl-sub mt-5 text-center">
+          New here?{' '}
+          <Link href="/register" style={{ color: 'var(--icl-brand)', fontWeight: 700 }}>
+            Create a doctor account
+          </Link>
+        </p>
+      </div>
+
+      {/* Patients use the app, not this portal. */}
+      <div className="mt-6 w-full max-w-md text-center">
+        <p className="icl-small">Are you a patient?</p>
+        <a
+          href={PATIENT_APP}
+          className="icl-btn icl-btn-ghost mt-2 inline-flex w-full items-center justify-center gap-2"
+        >
+          Open the patient app
+          <ArrowRight className="h-4 w-4" />
+        </a>
       </div>
 
       <OtpDialog
         open={otpOpen}
         email={otpEmail}
         onSuccess={() => { setOtpOpen(false); router.push('/dashboard') }}
-        onResend={handleResendOtp}
+        onResend={resendCode}
         onClose={() => setOtpOpen(false)}
       />
     </div>

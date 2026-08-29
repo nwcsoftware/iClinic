@@ -1,21 +1,29 @@
 // A stylised Lebanon, drawn straight in geographic coordinates.
 //
 // The viewBox is longitude by negative latitude, so every city below sits at
-// its true position without a projection step or a map tile to download. It is
-// a silhouette, not a survey — the coastline is simplified — but nothing on it
-// is in the wrong place.
+// its true position without a projection step or a map tile to download.
+//
+// The outline is a simplified silhouette rather than a survey, but it is
+// simplified where the country is straight and detailed where it bends: the
+// coast between Beirut and Tyre, and the eastern bulge around Baalbek, are
+// what make the shape recognisable as Lebanon rather than as a blob.
 
 const OUTLINE = [
-  // Coast, north to south
-  [35.98, 34.63], [35.90, 34.60], [35.82, 34.50], [35.78, 34.44], [35.70, 34.35],
-  [35.65, 34.22], [35.58, 34.10], [35.52, 33.98], [35.48, 33.88], [35.42, 33.75],
-  [35.36, 33.62], [35.28, 33.48], [35.20, 33.35], [35.12, 33.20], [35.10, 33.09],
-  // Southern border, west to east
-  [35.30, 33.09], [35.42, 33.10], [35.55, 33.24], [35.62, 33.24], [35.72, 33.30],
-  [35.83, 33.38], [35.90, 33.45],
-  // Eastern border, south to north
-  [36.02, 33.62], [36.30, 33.65], [36.42, 33.83], [36.30, 34.02], [36.40, 34.20],
-  [36.44, 34.32], [36.36, 34.45], [36.20, 34.55], [36.08, 34.62],
+  // Coast, Arida down to Naqoura. Denser through the middle, where the
+  // shoreline actually bends, and sparser along the straighter stretches.
+  [35.98, 34.63], [35.90, 34.61], [35.87, 34.52], [35.82, 34.46], [35.74, 34.42],
+  [35.69, 34.35], [35.66, 34.28], [35.64, 34.20], [35.62, 34.12], [35.59, 34.04],
+  [35.55, 33.98], [35.53, 33.92], [35.50, 33.87], [35.46, 33.80], [35.43, 33.72],
+  [35.39, 33.64], [35.36, 33.56], [35.31, 33.46], [35.26, 33.38], [35.21, 33.29],
+  [35.16, 33.20], [35.11, 33.09],
+  // Southern border, west to east, up to the Hermon foothills.
+  [35.25, 33.09], [35.36, 33.06], [35.45, 33.09], [35.51, 33.17], [35.55, 33.24],
+  [35.63, 33.24], [35.72, 33.32], [35.82, 33.41],
+  // Eastern border, south to north, following the Anti-Lebanon range and the
+  // bulge around Baalbek before it narrows again into Akkar.
+  [35.90, 33.50], [36.00, 33.62], [36.15, 33.72], [36.30, 33.83], [36.38, 33.92],
+  [36.33, 34.02], [36.31, 34.10], [36.36, 34.20], [36.44, 34.30], [36.40, 34.42],
+  [36.30, 34.50], [36.18, 34.58], [36.06, 34.63],
 ] as const
 
 const CITIES = [
